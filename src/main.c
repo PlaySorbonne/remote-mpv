@@ -24,6 +24,10 @@
 #define BUFFER_SIZE 1024
 #define UNIX_SOCKET_RESPONSE_BUFFER_SIZE 25600
 #define TIMEOUT_SECONDS 5
+#define CONTENT_ERROR_404                                                      \
+  "<html><head><title>Resource Not Found</title></head><body><p>The resource " \
+  "you requested has not been found at the specified address. Please check "   \
+  "the spelling of the address.</p></body></html>"
 
 // Global variables for socket file descriptors
 int sockfd = -1;
@@ -255,16 +259,19 @@ int main(int argc, char **argv) {
           }
           response =
               generate_http_response("200 OK", output, "application/json");
+        } else {
+          response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                            "text/html");
         }
-        free(body);
       } else {
-        response = generate_http_response("404 Not Found", "NO POST REQUEST",
-                                          "application/json");
+        response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                          "text/html");
       }
     } else {
-      response = generate_http_response("404 Not Found", "NOT FOUND",
-                                        "application/json");
+      response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                        "text/html");
     }
+    free(body);
 
     if (!response) {
       fprintf(stderr, "Failed to generate HTTP response\n");
