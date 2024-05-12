@@ -1,0 +1,13 @@
+["loadfile", "https://www.youtube.com/watch?v=fGI2vCk6ykY", "append-play" ]
+
+["set_property", "pause", true]
+
+["set_property", "pause", false]
+
+["loadfile", "https://www.youtube.com/watch?v=NMUFavYTN1o", "append-play" ]
+
+["loadfile", "https://www.youtube.com/watch?v=kFEeyfTqXJM", "append-play" ]
+
+["playlist-next"]
+
+["get_property", "playlist"]
