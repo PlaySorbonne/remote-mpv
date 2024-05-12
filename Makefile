@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Werror
+CFLAGS := -Wall -Werror -g
 
 SRCDIR := src
 SRCS := $(notdir $(wildcard $(SRCDIR)/*.c))
