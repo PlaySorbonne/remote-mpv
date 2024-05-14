@@ -18,5 +18,5 @@ make run
 ```
 or with: 
 ```sh
-build/out/remote-mpv -p 8080 -s /tmp/mpvsocket
+build/out/remote-mpv -p 8080 -s /tmp/mpvsocket -d web
 ```
