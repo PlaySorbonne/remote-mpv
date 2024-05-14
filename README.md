@@ -2,6 +2,13 @@
 Basic HTTP server which handles POST requests and forward their content to a UNIX socket
 
 ## Build and run
+
+### Requirements
+- C compiler
+- libc
+- libmagic
+- support for unix sockets
+
 ### to build
 ```sh
 make build
