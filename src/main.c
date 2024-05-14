@@ -214,6 +214,8 @@ bool readFile(const char *filename, char **content) {
   return true;
 }
 
+bool fileExists(const char *filename) { return access(filename, F_OK) != -1; }
+
 int main(int argc, char **argv) {
   int port_nb = 0;
   char *unix_socket_path = NULL;
@@ -336,52 +338,62 @@ int main(int argc, char **argv) {
 
     // Generate appropriate HTTP response based on requested URI
     if (strcmp(uri, "/") == 0) {
-      // Create a string composed of web_server_dir concatenated with a filename
-      char *filename =
-          "index.html"; // You can change this to any other filename
+      if (strcmp(method, "GET") == 0) {
+        // Create a string composed of web_server_dir concatenated with a
+        // filename
+        char *filename =
+            "index.html"; // You can change this to any other filename
 
-      // Calculate the length of the filepath
-      size_t web_server_dir_len = strlen(web_server_dir);
-      size_t filename_len = strlen(filename);
-      size_t filepath_len =
-          web_server_dir_len + filename_len +
-          2; // +1 for the '/' separator, +1 for the null terminator
+        // Calculate the length of the filepath
+        size_t web_server_dir_len = strlen(web_server_dir);
+        size_t filename_len = strlen(filename);
+        size_t filepath_len =
+            web_server_dir_len + filename_len +
+            2; // +1 for the '/' separator, +1 for the null terminator
 
-      // Allocate memory for the filepath dynamically
-      char *filepath = (char *)malloc(filepath_len);
-      if (filepath == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-      }
+        // Allocate memory for the filepath dynamically
+        char *filepath = (char *)malloc(filepath_len);
+        if (filepath == NULL) {
+          fprintf(stderr, "Memory allocation failed\n");
+          exit(EXIT_FAILURE);
+        }
 
-      // Concatenate web_server_dir and filename into filepath
-      snprintf(filepath, filepath_len, "%s/%s", web_server_dir, filename);
+        // Concatenate web_server_dir and filename into filepath
+        snprintf(filepath, filepath_len, "%s/%s", web_server_dir, filename);
+        if (fileExists(filepath)) {
+          // Use magic database to detect MIME type
+          const char *mime_type = magic_file(magic_cookie, filepath);
+          if (mime_type == NULL) {
+            fprintf(stderr, "Cannot determine MIME type - %s\n",
+                    magic_error(magic_cookie));
+            mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
+          }
 
-      // Use magic database to detect MIME type
-      const char *mime_type = magic_file(magic_cookie, filepath);
-      if (mime_type == NULL) {
-        fprintf(stderr, "Cannot determine MIME type - %s\n",
-                magic_error(magic_cookie));
-        mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
-      }
+          // If MIME type is still not determined, default to text/html
+          if (mime_type == NULL ||
+              strcmp(mime_type, "application/octet-stream") == 0) {
+            mime_type = DEFAULT_MIME_TYPE;
+          }
 
-      // If MIME type is still not determined, default to text/html
-      if (mime_type == NULL ||
-          strcmp(mime_type, "application/octet-stream") == 0) {
-        mime_type = DEFAULT_MIME_TYPE;
-      }
+          char *fileContent;
+          bool success = readFile(filepath, &fileContent);
+          if (success) {
+            response = generate_http_response("200 OK", fileContent, mime_type);
+            free(fileContent);
+          } else {
+            response = generate_http_response("404 Not Found",
+                                              CONTENT_ERROR_404, "text/html");
+          }
+        } else {
+          response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                            "text/html");
+        }
 
-      char *fileContent;
-      bool success = readFile(filepath, &fileContent);
-      if (success) {
-        response = generate_http_response("200 OK", fileContent, mime_type);
-        free(fileContent);
+        free(filepath);
       } else {
         response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
                                           "text/html");
       }
-      free(filepath);
-
     } else if (strcmp(uri, "/post") == 0) {
       if (body) {
         if (strcmp(method, "POST") == 0) {
@@ -408,49 +420,60 @@ int main(int argc, char **argv) {
                                           "text/html");
       }
     } else {
-      // Create a string composed of web_server_dir concatenated with a filename
-      char *filename = uri; // You can change this to any other filename
+      if (strcmp(method, "GET") == 0) {
+        // Create a string composed of web_server_dir concatenated with a
+        // filename
+        char *filename = uri; // You can change this to any other filename
 
-      // Calculate the length of the filepath
-      size_t web_server_dir_len = strlen(web_server_dir);
-      size_t filename_len = strlen(filename);
-      size_t filepath_len =
-          web_server_dir_len + filename_len +
-          1; // +1 for the '/' separator, +1 for the null terminator
+        // Calculate the length of the filepath
+        size_t web_server_dir_len = strlen(web_server_dir);
+        size_t filename_len = strlen(filename);
+        size_t filepath_len =
+            web_server_dir_len + filename_len +
+            1; // +1 for the '/' separator, +1 for the null terminator
 
-      // Allocate memory for the filepath dynamically
-      char *filepath = (char *)malloc(filepath_len);
-      if (filepath == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-      }
+        // Allocate memory for the filepath dynamically
+        char *filepath = (char *)malloc(filepath_len);
+        if (filepath == NULL) {
+          fprintf(stderr, "Memory allocation failed\n");
+          exit(EXIT_FAILURE);
+        }
 
-      // Concatenate web_server_dir and filename into filepath
-      snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
-      // Use magic database to detect MIME type
-      const char *mime_type = magic_file(magic_cookie, filepath);
-      if (mime_type == NULL) {
-        fprintf(stderr, "Cannot determine MIME type - %s\n",
-                magic_error(magic_cookie));
-        mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
-      }
+        // Concatenate web_server_dir and filename into filepath
+        snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
+        if (fileExists(filepath)) {
+          // Use magic database to detect MIME type
+          const char *mime_type = magic_file(magic_cookie, filepath);
+          if (mime_type == NULL) {
+            fprintf(stderr, "Cannot determine MIME type - %s\n",
+                    magic_error(magic_cookie));
+            mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
+          }
 
-      // If MIME type is still not determined, default to text/html
-      if (mime_type == NULL ||
-          strcmp(mime_type, "application/octet-stream") == 0) {
-        mime_type = DEFAULT_MIME_TYPE;
-      }
+          // If MIME type is still not determined, default to text/html
+          if (mime_type == NULL ||
+              strcmp(mime_type, "application/octet-stream") == 0) {
+            mime_type = DEFAULT_MIME_TYPE;
+          }
 
-      char *fileContent;
-      bool success = readFile(filepath, &fileContent);
-      if (success) {
-        response = generate_http_response("200 OK", fileContent, mime_type);
-        free(fileContent);
+          char *fileContent;
+          bool success = readFile(filepath, &fileContent);
+          if (success) {
+            response = generate_http_response("200 OK", fileContent, mime_type);
+            free(fileContent);
+          } else {
+            response = generate_http_response("404 Not Found",
+                                              CONTENT_ERROR_404, "text/html");
+          }
+        } else {
+          response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                            "text/html");
+        }
+        free(filepath);
       } else {
         response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
                                           "text/html");
       }
-      free(filepath);
     }
     free(body);
 
