@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <magic.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -49,6 +50,7 @@
   "<html><head><title>Resource Not Found</title></head><body><p>The resource " \
   "you requested has not been found at the specified address. Please check "   \
   "the spelling of the address.</p></body></html>"
+#define DEFAULT_MIME_TYPE "text/html"
 
 // Global variables for socket file descriptors
 int sockfd = -1;
@@ -88,9 +90,14 @@ char *generate_http_response(const char *code, const char *response_text,
   size_t response_length = strlen(response_text);
   size_t http_response_size =
       sizeof(char) *
-      (strlen("HTTP/1.0 \r\n") + strlen(code) +
+      (strlen("HTTP/1.1 \r\n") + strlen(code) +
        strlen("Server: UNIX SOCKET BRIDGE\r\n") + strlen("Content-type: \r\n") +
-       strlen(type) + strlen("Content-length: \r\n") +
+       strlen(type) +
+       strlen(
+           "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: "
+           "GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, "
+           "Authorization\r\nAccess-Control-Allow-Credentials: true\r\n") +
+       strlen("Content-length: \r\n") +
        snprintf(NULL, 0, "%lu", response_length) + strlen("\r\n\r\n") +
        response_length + strlen("\r\n") + 1);
 
@@ -103,9 +110,13 @@ char *generate_http_response(const char *code, const char *response_text,
 
   // Format the http_response string
   snprintf(http_response, http_response_size,
-           "HTTP/1.0 %s\r\n"
+           "HTTP/1.1 %s\r\n"
            "Server: UNIX SOCKET BRIDGE\r\n"
            "Content-type: %s\r\n"
+           "Access-Control-Allow-Origin: *\r\n"
+           "Access-Control-Allow-Methods: GET, POST, OPTION\r\n"
+           "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
+           "Access-Control-Allow-Credentials: true\r\n"
            "Content-length: %lu\r\n"
            "\r\n%s\r\n",
            code, type, response_length, response_text);
@@ -170,14 +181,49 @@ int send_message_to_unix_socket(const char *unix_socket_path,
   return 0;
 }
 
+bool readFile(const char *filename, char **content) {
+  FILE *file = fopen(filename, "rb");
+  if (file == NULL) {
+    fprintf(stderr, "Error opening file %s\n", filename);
+    return false;
+  }
+
+  fseek(file, 0, SEEK_END);
+  long file_size = ftell(file);
+  rewind(file);
+
+  *content = (char *)malloc(file_size + 1);
+  if (*content == NULL) {
+    fprintf(stderr, "Memory allocation failed\n");
+    fclose(file);
+    return false;
+  }
+
+  size_t result = fread(*content, 1, file_size, file);
+  if (result != file_size) {
+    fprintf(stderr, "Error reading file %s\n", filename);
+    fclose(file);
+    free(*content);
+    return false;
+  }
+
+  (*content)[file_size] = '\0';
+
+  fclose(file);
+
+  return true;
+}
+
 int main(int argc, char **argv) {
   int port_nb = 0;
   char *unix_socket_path = NULL;
+  char *web_server_dir = NULL; // Variable to store the directory path
   char buffer[BUFFER_SIZE];
 
-  // Parse command line arguments for port number and Unix socket path
+  // Parse command line arguments for port number, Unix socket path, and
+  // directory path
   int opt;
-  while ((opt = getopt(argc, argv, "p:s:")) != -1) {
+  while ((opt = getopt(argc, argv, "p:s:d:")) != -1) {
     switch (opt) {
     case 'p':
       port_nb = atoi(optarg);
@@ -185,16 +231,40 @@ int main(int argc, char **argv) {
     case 's':
       unix_socket_path = optarg;
       break;
+    case 'd':
+      web_server_dir = optarg;
+      break;
     default:
-      fprintf(stderr, "Usage: %s -p <port> -s <unix_socket_path>\n", argv[0]);
+      fprintf(stderr,
+              "Usage: %s -p <port> -s <unix_socket_path> -d "
+              "<web_server_directory>\n",
+              argv[0]);
       exit(EXIT_FAILURE);
     }
   }
 
-  // Ensure port number and Unix socket path are provided
-  if (port_nb == 0 || unix_socket_path == NULL) {
-    fprintf(stderr, "Usage: %s -p <port> -s <unix_socket_path>\n", argv[0]);
+  // Ensure port number, Unix socket path, and web server directory are provided
+  if (port_nb == 0 || unix_socket_path == NULL || web_server_dir == NULL) {
+    fprintf(
+        stderr,
+        "Usage: %s -p <port> -s <unix_socket_path> -d <web_server_directory>\n",
+        argv[0]);
     exit(EXIT_FAILURE);
+  }
+
+  // Create magic database
+  magic_t magic_cookie = magic_open(MAGIC_MIME_TYPE);
+  if (magic_cookie == NULL) {
+    fprintf(stderr, "Unable to initialize magic library\n");
+    return 1;
+  }
+
+  // Load the default magic database
+  if (magic_load(magic_cookie, NULL) != 0) {
+    fprintf(stderr, "Cannot load magic database - %s\n",
+            magic_error(magic_cookie));
+    magic_close(magic_cookie);
+    return 1;
   }
 
   // Create TCP socket
@@ -266,8 +336,52 @@ int main(int argc, char **argv) {
 
     // Generate appropriate HTTP response based on requested URI
     if (strcmp(uri, "/") == 0) {
-      response = generate_http_response(
-          "200 OK", "<html><h1>REMOTE UNIX SOCKET</h1></html>", "text/html");
+      // Create a string composed of web_server_dir concatenated with a filename
+      char *filename =
+          "index.html"; // You can change this to any other filename
+
+      // Calculate the length of the filepath
+      size_t web_server_dir_len = strlen(web_server_dir);
+      size_t filename_len = strlen(filename);
+      size_t filepath_len =
+          web_server_dir_len + filename_len +
+          2; // +1 for the '/' separator, +1 for the null terminator
+
+      // Allocate memory for the filepath dynamically
+      char *filepath = (char *)malloc(filepath_len);
+      if (filepath == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+      }
+
+      // Concatenate web_server_dir and filename into filepath
+      snprintf(filepath, filepath_len, "%s/%s", web_server_dir, filename);
+
+      // Use magic database to detect MIME type
+      const char *mime_type = magic_file(magic_cookie, filepath);
+      if (mime_type == NULL) {
+        fprintf(stderr, "Cannot determine MIME type - %s\n",
+                magic_error(magic_cookie));
+        mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
+      }
+
+      // If MIME type is still not determined, default to text/html
+      if (mime_type == NULL ||
+          strcmp(mime_type, "application/octet-stream") == 0) {
+        mime_type = DEFAULT_MIME_TYPE;
+      }
+
+      char *fileContent;
+      bool success = readFile(filepath, &fileContent);
+      if (success) {
+        response = generate_http_response("200 OK", fileContent, mime_type);
+        free(fileContent);
+      } else {
+        response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                          "text/html");
+      }
+      free(filepath);
+
     } else if (strcmp(uri, "/post") == 0) {
       if (body) {
         if (strcmp(method, "POST") == 0) {
@@ -294,8 +408,49 @@ int main(int argc, char **argv) {
                                           "text/html");
       }
     } else {
-      response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
-                                        "text/html");
+      // Create a string composed of web_server_dir concatenated with a filename
+      char *filename = uri; // You can change this to any other filename
+
+      // Calculate the length of the filepath
+      size_t web_server_dir_len = strlen(web_server_dir);
+      size_t filename_len = strlen(filename);
+      size_t filepath_len =
+          web_server_dir_len + filename_len +
+          1; // +1 for the '/' separator, +1 for the null terminator
+
+      // Allocate memory for the filepath dynamically
+      char *filepath = (char *)malloc(filepath_len);
+      if (filepath == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+      }
+
+      // Concatenate web_server_dir and filename into filepath
+      snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
+      // Use magic database to detect MIME type
+      const char *mime_type = magic_file(magic_cookie, filepath);
+      if (mime_type == NULL) {
+        fprintf(stderr, "Cannot determine MIME type - %s\n",
+                magic_error(magic_cookie));
+        mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
+      }
+
+      // If MIME type is still not determined, default to text/html
+      if (mime_type == NULL ||
+          strcmp(mime_type, "application/octet-stream") == 0) {
+        mime_type = DEFAULT_MIME_TYPE;
+      }
+
+      char *fileContent;
+      bool success = readFile(filepath, &fileContent);
+      if (success) {
+        response = generate_http_response("200 OK", fileContent, mime_type);
+        free(fileContent);
+      } else {
+        response = generate_http_response("404 Not Found", CONTENT_ERROR_404,
+                                          "text/html");
+      }
+      free(filepath);
     }
     free(body);
 

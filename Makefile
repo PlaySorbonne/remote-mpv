@@ -1,5 +1,6 @@
 CC := gcc
-CFLAGS := -Wall -Werror -g
+CFLAGS := -Wall -Werror -g -lmagic
+
 
 SRCDIR := src
 SRCS := $(notdir $(wildcard $(SRCDIR)/*.c))
@@ -12,15 +13,16 @@ OUTDIR := $(BUILDDIR)/out
 EXEC := remote-mpv
 PORT := 8080
 SOCKETPATH := /tmp/mpvsocket
+WEBPATH := web
 
 
 all: build run
 
 build: INITBUILDDIR $(OBJS)
-	gcc $(addprefix $(OBJSDIR)/, $(OBJS)) -o $(OUTDIR)/$(EXEC)
+	gcc $(CFLAGS) $(addprefix $(OBJSDIR)/, $(OBJS)) -o $(OUTDIR)/$(EXEC)
 
 run:
-	$(OUTDIR)/./$(EXEC) -p $(PORT) -s $(SOCKETPATH)
+	$(OUTDIR)/./$(EXEC) -p $(PORT) -s $(SOCKETPATH) -d $(WEBPATH)
 
 clean:
 	rm -f $(addprefix $(OBJSDIR)/, $(OBJS))
