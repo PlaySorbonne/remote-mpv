@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -51,6 +52,7 @@
   "you requested has not been found at the specified address. Please check "   \
   "the spelling of the address.</p></body></html>"
 #define DEFAULT_MIME_TYPE "text/html"
+#define INDEX_FILE_NAME "index.html"
 
 // Global variables for socket file descriptors
 int sockfd = -1;
@@ -196,7 +198,7 @@ int send_message_to_unix_socket(const char *unix_socket_path,
   return 0;
 }
 
-bool readFile(const char *filename, char **content) {
+bool read_file(const char *filename, char **content) {
   FILE *file = fopen(filename, "rb");
   if (file == NULL) {
     fprintf(stderr, "Error opening file %s\n", filename);
@@ -229,11 +231,21 @@ bool readFile(const char *filename, char **content) {
   return true;
 }
 
-bool fileExists(const char *filename) { return access(filename, F_OK) != -1; }
+bool file_exists(const char *filename) { return access(filename, F_OK) != -1; }
 
-bool hasExtension(const char *filename) {
-    const char *dot = strrchr(filename, '.');
-    return dot != NULL && dot != filename; // Ensure dot is not at the beginning
+bool has_extension(const char *filename) {
+  const char *dot = strrchr(filename, '.');
+  return dot != NULL && dot != filename; // Ensure dot is not at the beginning
+}
+
+int is_dir(const char *path) {
+  struct stat path_stat;
+  if (stat(path, &path_stat) != 0) {
+    perror("stat");
+    return 0; // Return 0 if stat fails
+  }
+
+  return S_ISDIR(path_stat.st_mode);
 }
 
 int main(int argc, char **argv) {
@@ -373,8 +385,8 @@ int main(int argc, char **argv) {
       if (strcmp(method, "GET") == 0) {
         // Create a string composed of web_server_dir concatenated with a
         // filename
-        char *filename =
-            "index.html"; // You can change this to any other filename
+        char filename[] =
+            INDEX_FILE_NAME; // You can change this to any other filename
 
         // Calculate the length of the filepath
         size_t web_server_dir_len = strlen(web_server_dir);
@@ -393,7 +405,7 @@ int main(int argc, char **argv) {
 
         // Concatenate web_server_dir and filename into filepath
         snprintf(filepath, filepath_len, "%s/%s", web_server_dir, filename);
-        if (fileExists(filepath)) {
+        if (file_exists(filepath)) {
           // Use magic database to detect MIME type
           const char *mime_type = magic_file(magic_cookie, filepath);
           if (mime_type == NULL) {
@@ -403,7 +415,7 @@ int main(int argc, char **argv) {
           }
 
           char *fileContent;
-          bool success = readFile(filepath, &fileContent);
+          bool success = read_file(filepath, &fileContent);
           if (success) {
             response = generate_http_response("200 OK", fileContent, mime_type);
             free(fileContent);
@@ -452,41 +464,48 @@ int main(int argc, char **argv) {
         // filename
         char *filename = uri; // You can change this to any other filename
 
-
-        char extension[6];
         // Calculate the length of the filepath
         size_t web_server_dir_len = strlen(web_server_dir);
         size_t filename_len = strlen(filename);
         size_t filepath_len =
-            web_server_dir_len + filename_len +
-            1; // +1 for the null terminator
-char *filepath;
-         if (!hasExtension(filename)) {
-            filepath_len += 6;
+            web_server_dir_len + filename_len + 1; // +1 for the null terminator
+        char *filepath;
+        if (!has_extension(filename)) {
+          char *extension =
+              malloc(sizeof(char) * strlen("/" INDEX_FILE_NAME) + 1);
+          filepath_len += strlen("/" INDEX_FILE_NAME);
+          // Allocate memory for the filepath dynamically
+          filepath = (char *)malloc(filepath_len);
+          if (filepath == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            free(body);
+            continue;
+          }
 
-        extension[0] = '.';
-        extension[1] = 'h';
-        extension[2] = 't';
-        extension[3] = 'm';
-        extension[4] = 'l';
-        extension[5] = '\0';
+          // Concatenate web_server_dir and filename into filepath
+          snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
 
+          if (is_dir(filepath)) {
+            strcpy(extension, "/" INDEX_FILE_NAME);
+          } else {
+            strcpy(extension, ".html");
+          }
+          strcat(filepath, extension);
+        } else {
 
-         } else {
-           extension[0]='\0';
+          // Allocate memory for the filepath dynamically
+          filepath = (char *)malloc(filepath_len);
+          if (filepath == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            free(body);
+            continue;
+          }
 
+          // Concatenate web_server_dir and filename into filepath
+          snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
         }
-                            // Allocate memory for the filepath dynamically
-        filepath = (char *)malloc(filepath_len);
-        if (filepath == NULL) {
-          fprintf(stderr, "Memory allocation failed\n");
-          free(body);
-          continue;
-        }
 
-                // Concatenate web_server_dir and filename into filepath
-        snprintf(filepath, filepath_len, "%s%s%s", web_server_dir, filename, extension);
-        if (fileExists(filepath)) {
+        if (file_exists(filepath)) {
           // Use magic database to detect MIME type
           const char *mime_type = magic_file(magic_cookie, filepath);
           if (mime_type == NULL) {
@@ -496,7 +515,7 @@ char *filepath;
           }
 
           char *fileContent;
-          bool success = readFile(filepath, &fileContent);
+          bool success = read_file(filepath, &fileContent);
           if (success) {
             response = generate_http_response("200 OK", fileContent, mime_type);
             free(fileContent);
