@@ -231,6 +231,11 @@ bool readFile(const char *filename, char **content) {
 
 bool fileExists(const char *filename) { return access(filename, F_OK) != -1; }
 
+bool hasExtension(const char *filename) {
+    const char *dot = strrchr(filename, '.');
+    return dot != NULL && dot != filename; // Ensure dot is not at the beginning
+}
+
 int main(int argc, char **argv) {
   int port_nb = 0;
   char *unix_socket_path = NULL;
@@ -447,23 +452,40 @@ int main(int argc, char **argv) {
         // filename
         char *filename = uri; // You can change this to any other filename
 
+
+        char extension[6];
         // Calculate the length of the filepath
         size_t web_server_dir_len = strlen(web_server_dir);
         size_t filename_len = strlen(filename);
         size_t filepath_len =
             web_server_dir_len + filename_len +
-            1; // +1 for the '/' separator, +1 for the null terminator
+            1; // +1 for the null terminator
+char *filepath;
+         if (!hasExtension(filename)) {
+            filepath_len += 6;
 
-        // Allocate memory for the filepath dynamically
-        char *filepath = (char *)malloc(filepath_len);
+        extension[0] = '.';
+        extension[1] = 'h';
+        extension[2] = 't';
+        extension[3] = 'm';
+        extension[4] = 'l';
+        extension[5] = '\0';
+
+
+         } else {
+           extension[0]='\0';
+
+        }
+                            // Allocate memory for the filepath dynamically
+        filepath = (char *)malloc(filepath_len);
         if (filepath == NULL) {
           fprintf(stderr, "Memory allocation failed\n");
           free(body);
           continue;
         }
 
-        // Concatenate web_server_dir and filename into filepath
-        snprintf(filepath, filepath_len, "%s%s", web_server_dir, filename);
+                // Concatenate web_server_dir and filename into filepath
+        snprintf(filepath, filepath_len, "%s%s%s", web_server_dir, filename, extension);
         if (fileExists(filepath)) {
           // Use magic database to detect MIME type
           const char *mime_type = magic_file(magic_cookie, filepath);
