@@ -56,9 +56,11 @@
 int sockfd = -1;
 int connect_sockfd = -1;
 int unix_sockfd = -1;
+magic_t magic_cookie = NULL;
 
 // Signal handler for SIGINT (Ctrl+C)
 void sigint_handler(int sig_num) {
+  (void)sig_num;
   printf(ANSI_STYLE_BOLD ANSI_COLOR_RED
          "\nCtrl+C pressed. Exiting gracefully...\n" ANSI_RESET_ALL);
 
@@ -69,6 +71,8 @@ void sigint_handler(int sig_num) {
     close(connect_sockfd);
   if (unix_sockfd != -1)
     close(unix_sockfd);
+  if (magic_cookie)
+    magic_close(magic_cookie);
 
   exit(EXIT_SUCCESS);
 }
@@ -137,6 +141,18 @@ int send_message_to_unix_socket(const char *unix_socket_path,
     return -1;
   }
 
+  // Setting the receive timeout
+  struct timeval timeout;
+  timeout.tv_sec = TIMEOUT_SECONDS; // 5 seconds timeout
+  timeout.tv_usec = 0;              // 0 microseconds
+
+  if (setsockopt(unix_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                 sizeof(timeout)) < 0) {
+    perror("setsockopt");
+    close(sockfd);
+    return -1;
+  }
+
   server_addr.sun_family = AF_UNIX;
   strncpy(server_addr.sun_path, unix_socket_path,
           sizeof(server_addr.sun_path) - 1);
@@ -161,11 +177,10 @@ int send_message_to_unix_socket(const char *unix_socket_path,
     return -1;
   }
   free(cmd);
-
   bytes_received = recv(unix_sockfd, buffer, buffer_size - 1, 0);
   if (bytes_received == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      printf("Receive timeout occurred.\n");
+      fprintf(stderr, "Receive timeout occurred.\n");
       return -1;
     } else {
       perror("recv");
@@ -189,7 +204,7 @@ bool readFile(const char *filename, char **content) {
   }
 
   fseek(file, 0, SEEK_END);
-  long file_size = ftell(file);
+  unsigned long file_size = ftell(file);
   rewind(file);
 
   *content = (char *)malloc(file_size + 1);
@@ -199,7 +214,7 @@ bool readFile(const char *filename, char **content) {
     return false;
   }
 
-  size_t result = fread(*content, 1, file_size, file);
+  unsigned long result = fread(*content, 1, file_size, file);
   if (result != file_size) {
     fprintf(stderr, "Error reading file %s\n", filename);
     fclose(file);
@@ -255,7 +270,7 @@ int main(int argc, char **argv) {
   }
 
   // Create magic database
-  magic_t magic_cookie = magic_open(MAGIC_MIME_TYPE);
+  magic_cookie = magic_open(MAGIC_MIME_TYPE);
   if (magic_cookie == NULL) {
     fprintf(stderr, "Unable to initialize magic library\n");
     return 1;
@@ -318,6 +333,18 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    // Setting the receive timeout
+    struct timeval timeout;
+    timeout.tv_sec = TIMEOUT_SECONDS; // 5 seconds timeout
+    timeout.tv_usec = 0;              // 0 microseconds
+
+    if (setsockopt(connect_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+                   sizeof(timeout)) < 0) {
+      perror("setsockopt");
+      close(sockfd);
+      return 1;
+    }
+
     int n_read = read(connect_sockfd, buffer, BUFFER_SIZE);
     if (n_read < 0) {
       perror("read");
@@ -355,7 +382,8 @@ int main(int argc, char **argv) {
         char *filepath = (char *)malloc(filepath_len);
         if (filepath == NULL) {
           fprintf(stderr, "Memory allocation failed\n");
-          exit(EXIT_FAILURE);
+          free(body);
+          continue;
         }
 
         // Concatenate web_server_dir and filename into filepath
@@ -367,12 +395,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Cannot determine MIME type - %s\n",
                     magic_error(magic_cookie));
             mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
-          }
-
-          // If MIME type is still not determined, default to text/html
-          if (mime_type == NULL ||
-              strcmp(mime_type, "application/octet-stream") == 0) {
-            mime_type = DEFAULT_MIME_TYPE;
           }
 
           char *fileContent;
@@ -436,7 +458,8 @@ int main(int argc, char **argv) {
         char *filepath = (char *)malloc(filepath_len);
         if (filepath == NULL) {
           fprintf(stderr, "Memory allocation failed\n");
-          exit(EXIT_FAILURE);
+          free(body);
+          continue;
         }
 
         // Concatenate web_server_dir and filename into filepath
@@ -448,12 +471,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Cannot determine MIME type - %s\n",
                     magic_error(magic_cookie));
             mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
-          }
-
-          // If MIME type is still not determined, default to text/html
-          if (mime_type == NULL ||
-              strcmp(mime_type, "application/octet-stream") == 0) {
-            mime_type = DEFAULT_MIME_TYPE;
           }
 
           char *fileContent;

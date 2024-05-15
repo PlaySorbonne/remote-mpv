@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Werror -g -lmagic
+CFLAGS := -Wall -Werror -Wextra -O3 -lmagic
 
 
 SRCDIR := src

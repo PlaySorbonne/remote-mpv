@@ -33,7 +33,7 @@ form.addEventListener('submit', async function(event) {
     const command = commandInput.value;
 
     // Create JSON object with command as an array
-    const jsonData = { command: JSON.parse(command) };
+   // const jsonData = { JSON.parse(command) };
 
     try {
         const response = await fetch('http://localhost:8080/post', {
@@ -41,7 +41,7 @@ form.addEventListener('submit', async function(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(jsonData)
+            body: command
         });
 
         if (!response.ok) {
