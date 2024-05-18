@@ -407,11 +407,6 @@ int main(int argc, char **argv) {
        if (strcmp(method, "OPTIONS") == 0) {
     // Respond with appropriate CORS headers
     response = generate_http_response("200 OK", "", "text/plain");
-    // Add CORS headers
-    strcat(response, "Access-Control-Allow-Origin: *\r\n");
-    strcat(response, "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
-    strcat(response, "Access-Control-Allow-Headers: Content-Type, Authorization\r\n");
-    strcat(response, "Access-Control-Allow-Credentials: true\r\n");
        } else if (strcmp(uri, "/") == 0) {
       if (strcmp(method, "GET") == 0) {
         // Create a string composed of web_server_dir concatenated with a
