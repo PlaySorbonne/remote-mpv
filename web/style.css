@@ -1,0 +1,219 @@
+/* Root variables */
+:root {
+    --playlist-width: 30%; /* Default width for the playlist */
+    --playlist-padding: 20px; /* Default padding for the playlist */
+}
+
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+#header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f0f0f0;
+    padding: 10px;
+    height: 70px;
+    text-align: center;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Align items vertically */
+}
+
+#hamburgerMenu {
+    display: none; /* Initially hide the hamburger menu */
+}
+
+#hamburgerMenu span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: #333;
+    margin: 5px auto;
+    transition: all 0.3s ease;
+}
+
+#hamburgerMenu.open span:nth-child(1) {
+    transform: rotate(-45deg) translate(-5px, 6px);
+}
+
+#hamburgerMenu.open span:nth-child(2) {
+    opacity: 0;
+}
+
+#hamburgerMenu.open span:nth-child(3) {
+    transform: rotate(45deg) translate(-5px, -6px);
+}
+
+#searchBar {
+    width: 100%;
+    position: fixed; /* Make the search bar fixed */
+    top: 70px; /* Adjust this value based on your header height */
+    left: 0;
+    background-color: #f0f0f0;
+    padding: 10px 0;
+    z-index: 1000; /* Ensure it stays above other content */
+    text-align: center;
+}
+
+#searchForm {
+    width: 70%;
+    margin: 0 auto;
+}
+
+#searchInput {
+    width: 35%; /* Adjust the width as needed */
+}
+
+#mainContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 120px; /* Increase margin top to accommodate the fixed header and search form */
+}
+
+#grid {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    max-width: calc(100% - var(--playlist-width) - 3%); /* Adjust based on playlist width and margin */
+    margin: 0;
+}
+
+.grid-item {
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: #f9f9f9;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.grid-item img {
+    max-width: 100%;
+    height: auto;
+}
+
+.grid-item.selected {
+    border-color: #00f;
+    background-color: #e0e0ff;
+}
+
+#playlist {
+    width: var(--playlist-width);
+    max-width: var(--playlist-width);
+    padding: var(--playlist-padding);
+    background-color: #f0f0f0;
+    overflow-y: auto;
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
+#playlist.open {
+    display: block;
+    position: fixed;
+    top: 60px; /* Adjust this value based on your header height */
+    right: 0;
+    bottom: 0;
+    width: 70%; /* Adjust the width as needed */
+    max-width: 300px; /* Max width for the playlist */
+    padding: 20px;
+    background-color: #f0f0f0;
+    overflow-y: auto;
+    z-index: 1000; /* Ensure it's above other content */
+}
+
+#playlistItems {
+    list-style-type: none;
+    padding: 0;
+}
+
+#playlistItems li {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+#playlistItems li:last-child {
+    border-bottom: none;
+}
+
+#playlistControls {
+    margin-top: 10px;
+}
+
+#footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #f0f0f0;
+    padding: 20px;
+    text-align: center;
+    z-index: 999; /* Lower z-index to ensure playlist is on top */
+}
+
+#pagination {
+    margin-bottom: 10px; /* Adjust spacing between buttons */
+}
+
+#pagination button {
+    margin-right: 10px; /* Adjust spacing between buttons */
+}
+
+#currentlyPlayingContainer {
+    display: flex;
+    align-items: center; /* Align items vertically */
+}
+
+#currentlyPlaying {
+    min-height: 20px; /* Set a minimum height */
+}
+
+#buttonsContainer {
+    display: flex;
+    align-items: center; /* Align items vertically */
+    gap: 10px; /* Adjust spacing between buttons */
+    margin-right:30px;
+}
+
+#buttonsContainer button {
+    margin: 0; /* Reset button margins */
+}
+
+@media screen and (max-width: 768px) {
+    #hamburgerMenu {
+        display: block;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1001; /* Ensure it's above other content */
+        cursor: pointer;
+    }
+
+    #playlist {
+        display: none;
+    }
+
+    #mainContainer {
+        margin-top: 80px; /* Adjust margin top for smaller screens */
+    }
+
+    #searchBar {
+        top: 40px; /* Adjust top position for smaller screens */
+    }

@@ -4,447 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search API Example</title>
-    <style>
-    #currentlyPlaying {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20px; /* Adjust margin as needed */
-}
-
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 0px;
-        }
-        #searchForm {
-            margin-bottom: 20px;
-            width: 70%;
-        }
-        #mainContainer {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-            max-width: 1200px;
-            margin-top: 20px;
-        }
-
-        .grid-item {
-            border: 1px solid #ddd;
-            padding: 10px;
-            background-color: #f9f9f9;
-            text-align: center;
-            cursor: pointer;
-            position: relative;
-        }
-        .grid-item img {
-            max-width: 100%;
-            height: auto;
-        }
-        .grid-item.selected {
-            border-color: #00f;
-            background-color: #e0e0ff;
-        }
-        #playlist {
-            width: 90%;
-            max-width: 90%;
-            right:0px;
-            padding-left:20px;
-            margin-left:20%;
-            padding: 20px;
-            background-color: #f0f0f0;
-            padding-top: 20px; /* Add padding to compensate for the header height */
-        }
-        #playlist h2 {
-            margin-top: 0;
-        }
-        #playlistItems {
-            list-style-type: none;
-            padding: 0;
-        }
-        #playlistItems li {
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-        #playlistItems li:last-child {
-            border-bottom: none;
-        }
-        #footer {
-    position: fixed;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    background-color: #f0f0f0;
-    padding: 20px;
-    text-align: center;
-    z-index: 1000; /* Ensure footer stays on top of other content */
-}
-
-#pagination {
-    margin-bottom: 10px; /* Adjust spacing between buttons */
-}
-
-#pagination button {
-    margin-right: 10px; /* Adjust spacing between buttons */
-}
-#grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-    max-width: 70%;
-    width: 100%;
-    margin: 0 auto; /* Center the grid horizontally */
-}
-#header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: #f0f0f0;
-    padding: 10px;
-    text-align: center;
-    z-index: 1000; /* Ensure header stays on top of other content */
-}
-
-#playNextHeaderButton {
-    font-size: 16px;
-    padding: 5px 10px;
-}
-#restartVideoButton {
-    font-size: 16px;
-    padding: 5px 10px;
-}
-
-#header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: #f0f0f0;
-    padding: 10px;
-    text-align: center;
-    z-index: 1000; /* Ensure header stays on top of other content */
-}
-
-/* Add padding under the header to prevent cropping */
-body {
-    padding-top: 50px; /* Adjust as needed */
-}
-
-#playlistContainer {
-    position: fixed;
-    top: 60px; /* Adjust the top position to align with the header */
-    right: 0; /* Align the playlist container to the right */
-    bottom: 0;
-    width: 30%; /* Adjust the width as needed */
-    overflow-y: auto;
-    z-index: 1000; /* Ensure playlist is above other content */
-    padding-right: 0px; /* Add padding to the right to prevent content from going beneath */
-}
-
-
-
-
-
-
-
-
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 </head>
-<header id="header">
-
-    <span id="currentlyPlayingTitle"></span>
-    <button id="restartVideoButton">Restart Video</button>
-    <button id="playNextHeaderButton">Play Next</button>
-</header>
 <body>
 
+<div id="header">
+    <!-- Preallocated height for currentlyPlaying span -->
+    <div id="currentlyPlayingContainer">
+        <span id="currentlyPlaying"></span>
+    </div>
+    <!-- Buttons Container -->
+    <div id="buttonsContainer">
+        <button id="restartVideoButton">Restart Video</button>
+        <button id="playNextHeaderButton">Play Next</button>
+    </div>
+</div>
 
-
-
-    <h1>Search API Example</h1>
-<div id="currentlyPlaying"></div>
-<button id="playNextButton">Play Next Video</button>
-
+<!-- Search bar -->
+<div id="searchBar">
     <form id="searchForm">
         <input type="text" id="searchInput" placeholder="Type your search here">
         <button type="submit">Search</button>
     </form>
-    <div id="playlistContainer">
-    <div id="playlist">
-        <h2>Playlist</h2>
-        <ul id="playlistItems"></ul>
-        <div id="playlistControls">
-            <button id="clearPlaylistButton">Clear Playlist</button>
-        </div>
-        </div>
-    </div>
-<div id="mainContainer">
-    <div id="grid"></div>
-
 </div>
 
+<!-- Hamburger Menu Button -->
+<div id="hamburgerMenu">
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
 
+<!-- Playlist -->
+<div id="playlist">
+    <h2>Playlist</h2>
+    <ul id="playlistItems"></ul>
+    <div id="playlistControls">
+        <button id="clearPlaylistButton">Clear Playlist</button>
+    </div>
+</div>
 
+<div id="mainContainer">
+    <div id="grid"></div>
+</div>
 
-
-
-
-
-</body>
-  <footer id="footer">
+<footer id="footer">
     <div id="pagination">
         <button id="prevButton" disabled>Previous</button>
         <button id="nextButton">Next</button>
     </div>
-    <button id="addToPlaylist">Add to Playlist</button>
-    <button id="addOnTopPlaylist">Add on Top</button>
+    <div id="playlistButtonsContainer">
+        <button id="addToPlaylist">Add to Playlist</button>
+        <button id="addOnTopPlaylist">Add on Top</button>
+    </div>
 </footer>
 
-    <script>
-document.addEventListener('DOMContentLoaded', function() {
-
-        let currentPage = 1;
-        let currentQuery = '';
-        let playlist = [];
-        let currentResults = [];
-
-        function fetchResults(query, page) {
-            fetch(`https://invidious.fdn.fr/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!Array.isArray(data)) {
-                        throw new Error('API response does not contain a valid array');
-                    }
-                    currentResults = data; // Store the current results
-                    console.log(currentResults); // Log the current results for demonstration
-
-                    // Clear the current grid
-                    const grid = document.getElementById('grid');
-                    grid.innerHTML = '';
-
-                    // Create grid items for each result
-                    currentResults.forEach((item, index) => {
-                        const gridItem = document.createElement('div');
-                        gridItem.className = 'grid-item';
-                        gridItem.setAttribute('data-index', index);
-                        gridItem.innerHTML = `
-                            <img src="${item.videoThumbnails[4].url}" alt="${item.title}">
-                            <h3>${item.title}</h3>
-                            <p>${item.description ? item.description : 'No description available'}</p>
-                        `;
-                        grid.appendChild(gridItem);
-
-                        // Add click event to the grid item
-                        gridItem.addEventListener('click', function() {
-                            gridItem.classList.toggle('selected');
-                        });
-                    });
-
-                    // Enable or disable pagination buttons
-                    document.getElementById('prevButton').disabled = page <= 1;
-                })
-                .catch(error => {
-                    console.error('Error making API call:', error);
-                    const grid = document.getElementById('grid');
-                    grid.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-                });
-        }
-
-        document.getElementById('searchForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the form from submitting the traditional way
-            currentQuery = document.getElementById('searchInput').value; // Get the search query
-            currentPage = 1; // Reset to first page
-            fetchResults(currentQuery, currentPage);
-        });
-
-        document.getElementById('prevButton').addEventListener('click', function() {
-            if (currentPage > 1) {
-                currentPage--;
-                fetchResults(currentQuery, currentPage);
-            }
-        });
-
-        document.getElementById('nextButton').addEventListener('click', function() {
-            currentPage++;
-            fetchResults(currentQuery, currentPage);
-        });
-
-        document.getElementById('addToPlaylist').addEventListener('click', function() {
-            const selectedItems = document.querySelectorAll('.grid-item.selected');
-            selectedItems.forEach(item => {
-                const index = item.getAttribute('data-index');
-                const video = currentResults[index];
-                if (!playlist.some(vid => vid.videoId === video.videoId)) {
-                    playlist.push(video);
-                }
-            });
-            console.log('Playlist:', playlist); // Log the playlist for demonstration
-        });
-        document.getElementById('addToPlaylist').addEventListener('click', function() {
-    const selectedItems = document.querySelectorAll('.grid-item.selected');
-    selectedItems.forEach(item => {
-        const index = item.getAttribute('data-index');
-        const video = currentResults[index];
-        if (!playlist.some(vid => vid.videoId === video.videoId)) {
-            playlist.push(video);
-        }
-    });
-    console.log('Playlist:', playlist); // Log the playlist for demonstration
-
-    // Clear selection
-    document.querySelectorAll('.grid-item.selected').forEach(item => {
-        item.classList.remove('selected');
-    });
-    // Call populatePlaylist initially to display the playlist
-populatePlaylist();
-});
-
-
-
-// Function to create a playlist item
-function createPlaylistItem(item, index) {
-    const listItem = document.createElement('li');
-    listItem.innerHTML = `
-        <img src="${item.videoThumbnails[5].url}" alt="${item.title}">
-        <h4>${item.title}</h4>
-        <button class="moveUpButton" ${index === 0 ? 'disabled' : ''}>&uarr;</button>
-        <button class="moveDownButton" ${index === playlist.length - 1 ? 'disabled' : ''}>&darr;</button>
-        <button class="removeItemButton">Remove Item</button>
-    `;
-    listItem.querySelector('.removeItemButton').addEventListener('click', function() {
-        playlist.splice(index, 1); // Remove item from playlist array
-        listItem.remove(); // Remove item from DOM
-        populatePlaylist();
-    });
-
-    listItem.querySelector('.moveUpButton').addEventListener('click', function() {
-        if (index > 0) {
-            const movedItem = playlist[index];
-            playlist.splice(index, 1);
-            playlist.splice(index - 1, 0, movedItem);
-            populatePlaylist();
-        }
-    });
-
-    listItem.querySelector('.moveDownButton').addEventListener('click', function() {
-        if (index < playlist.length - 1) {
-            const movedItem = playlist[index];
-            playlist.splice(index, 1);
-            playlist.splice(index + 1, 0, movedItem);
-            populatePlaylist();
-        }
-    });
-
-    return listItem;
-}
-
-// Function to populate the playlist
-function populatePlaylist() {
-    const playlistContainer = document.getElementById('playlistItems');
-    playlistContainer.innerHTML = ''; // Clear previous content
-
-    playlist.forEach((item, index) => {
-        const listItem = createPlaylistItem(item, index);
-        playlistContainer.appendChild(listItem);
-    });
-}
-
-// Call populatePlaylist initially to display the playlist
-populatePlaylist();
-
-
-
-// Clear playlist
-document.getElementById('clearPlaylistButton').addEventListener('click', function() {
-    const playlistContainer = document.getElementById('playlistItems');
-    playlistContainer.innerHTML = '';
-    playlist = []; // Clear playlist array
-});
-document.getElementById('addOnTopPlaylist').addEventListener('click', function() {
-    const selectedItems = document.querySelectorAll('.grid-item.selected');
-    const selectedVideos = Array.from(selectedItems).map(item => {
-        const index = parseInt(item.getAttribute('data-index'));
-        return currentResults[index];
-    });
-    playlist = [...selectedVideos, ...playlist]; // Add selected items to the beginning of the playlist
-    populatePlaylist();
-    // Clear selection
-    selectedItems.forEach(item => {
-        item.classList.remove('selected');
-    });
-});
-
-// Event listener for the "Play Next" button in the main content area
-document.getElementById('playNextButton').addEventListener('click', function() {
-    if (playlist.length > 0) {
-        const nextVideo = playlist.shift(); // Remove and get the first video from the playlist
-        displayCurrentlyPlaying(nextVideo); // Display the currently playing video
-        playVideo(nextVideo); // Call the function to play the video
-        populatePlaylist(); // Update the playlist display
-    } else {
-        alert('Playlist is empty!');
-    }
-});
-
-
-function displayCurrentlyPlaying(video) {
-    const currentlyPlayingDiv = document.getElementById('currentlyPlaying');
-    currentlyPlayingTitle.textContent = video.title;
-    currentlyPlayingDiv.innerHTML = `
-        <h2>Currently Playing</h2>
-        <img src="${video.videoThumbnails[3].url}" alt="${video.title}">
-        <h3>${video.title}</h3>
-    `;
-}
-
-// Event listener for the Play Next button in the header
-document.getElementById('playNextHeaderButton').addEventListener('click', function() {
-    if (playlist.length > 0) {
-        const nextVideo = playlist.shift(); // Remove and get the first video from the playlist
-        displayCurrentlyPlaying(nextVideo); // Display the currently playing video
-        playVideo(nextVideo); // Call the function to play the video
-        populatePlaylist(); // Update the playlist display
-    } else {
-        alert('Playlist is empty!');
-    }
-});
-
-// Event listener for the Restart Video button
-// Event listener for the Restart Video button
-document.getElementById('restartVideoButton').addEventListener('click', function() {
-    if (currentlyPlayingVideo) {
-        playVideo(currentlyPlayingVideo); // Call the function to restart the video with the currently playing video
-    } else {
-        alert('No video is currently playing!');
-    }
-});
-
-
-// Declare a global variable to store the currently playing video
-let currentlyPlayingVideo;
-
-// Function to play the video
-function playVideo(video) {
-    console.log(video); // Log the video object in the console
-    // Your code to play the video
-    currentlyPlayingVideo = video; // Store the currently playing video
-}
-
-
-
-
-});
-
-    </script>
+</body>
 </html>

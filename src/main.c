@@ -248,6 +248,19 @@ int is_dir(const char *path) {
   return S_ISDIR(path_stat.st_mode);
 }
 
+int isCSSFile(const char *filename) {
+    int len = strlen(filename);
+    if (len < 4) // ".css" has 4 characters
+        return 0;
+
+    // Compare the last 4 characters to ".css"
+    if (strcmp(filename + len - 4, ".css") == 0)
+        return 1;
+
+    return 0;
+}
+
+
 int main(int argc, char **argv) {
   int port_nb = 0;
   char *unix_socket_path = NULL;
@@ -514,9 +527,15 @@ int main(int argc, char **argv) {
             mime_type = DEFAULT_MIME_TYPE; // Default to text/html on error
           }
 
+          if (isCSSFile(filepath)) {
+            mime_type = "text/css";
+          }
+
           char *fileContent;
           bool success = read_file(filepath, &fileContent);
           if (success) {
+
+
             response = generate_http_response("200 OK", fileContent, mime_type);
             free(fileContent);
           } else {
