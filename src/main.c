@@ -260,6 +260,18 @@ int isCSSFile(const char *filename) {
     return 0;
 }
 
+int isJSFile(const char *filename) {
+    int len = strlen(filename);
+    if (len < 3) // ".css" has 4 characters
+        return 0;
+
+    // Compare the last 4 characters to ".css"
+    if (strcmp(filename + len - 3, ".js") == 0)
+        return 1;
+
+    return 0;
+}
+
 
 int main(int argc, char **argv) {
   int port_nb = 0;
@@ -529,6 +541,10 @@ int main(int argc, char **argv) {
 
           if (isCSSFile(filepath)) {
             mime_type = "text/css";
+          }
+
+          if (isJSFile(filepath)) {
+            mime_type = "application/javascript";
           }
 
           char *fileContent;
