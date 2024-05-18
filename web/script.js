@@ -6,6 +6,27 @@ let searchQuery = '';
 let currentlyPlaying = null;
 let autoPlay = false;
 
+
+// Define a global variable to hold the API URL
+let apiUrlMPV = 'http://localhost:8080/post';
+
+
+
+// Function to set the global variable with input field content
+function setApiUrl() {
+    // Get the input field value
+    apiUrlMPV = document.getElementById('apiUrlInput').value;
+
+    // Optionally, you can perform validation or sanitization here
+
+    // Log the API URL for testing (you can remove this in production)
+    console.log('API URL set to:', apiUrlMPV);
+}
+
+// Add an event listener to the submit button
+document.getElementById('apiSubmitButton').addEventListener('click', setApiUrl);
+
+
 // Function to toggle dark mode
 function toggleDarkMode() {
 	document.body.classList.toggle('dark-mode');
@@ -31,7 +52,7 @@ const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1'; // Replace with your 
 
 // Function to fetch video details from Invidious API
 async function fetchVideoDetails(videoId) {
-	const response = await fetch(`${invidiousApiUrl}/videos/${videoId}`);
+	const response = await fetch(`${invidiousApiUrl}/videos/${videoId}?region=FR`);
 	if (response.ok) {
 		const data = await response.json();
 		return data;
@@ -100,7 +121,7 @@ toggleButton.addEventListener('click', function() {
 });
 // Function to fetch videos from Invidious API
 async function searchVideos(query, page = 1) {
-	const response = await fetch(`${apiUrl}/search?q=${query}&page=${page}`);
+	const response = await fetch(`${apiUrl}/search?q=${query}&page=${page}&type=video&region=FR`);
 	const data = await response.json();
 	return data;
 }
@@ -267,7 +288,7 @@ function clearPlaylist() {
 }
 // Function to send video URL to MPV
 function sendToMPV(video) {
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+	const apiUrl = apiUrlMPV; // Replace with your API URL
 	console.log(video);
 	// Define the POST request body containing the video URL
 	const requestBody = JSON.stringify({
@@ -284,6 +305,7 @@ function sendToMPV(video) {
 	// Send POST request to the API
 	fetch(apiUrl, requestOptions).then(response => {
 		if (!response.ok) {
+            console.log(response);
 			throw new Error('Failed to send command to MPV');
 		}
 		console.log('Command sent successfully to MPV');
@@ -293,7 +315,7 @@ function sendToMPV(video) {
 }
 
 function isMPVPidle() {
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your MPV API URL
+	const apiUrl = apiUrlMPV; // Replace with your MPV API URL
 	// Send request to MPV to get current pause state
 	return sendRequest(apiUrl, {
 		command: ['get_property', 'idle-active']
@@ -312,7 +334,7 @@ function isMPVPidle() {
 }
 
 function isMPVPlaying() {
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your MPV API URL
+	const apiUrl = apiUrlMPV; // Replace with your MPV API URL
 	// Send request to MPV to get current pause state
 	return sendRequest(apiUrl, {
 		command: ['get_property', 'pause']
@@ -331,7 +353,7 @@ function isMPVPlaying() {
 }
 // Function to update playback time and total duration
 function updatePlaybackInfo() {
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+	const apiUrl = apiUrlMPV; // Replace with your API URL
 	// Make separate POST requests to get playback time and total duration
 	Promise.all([
 		sendRequest(apiUrl, {
@@ -414,10 +436,10 @@ function sendRequest(url, requestBody) {
 	});
 }
 // Call updatePlaybackInfo function every 5 seconds
-setInterval(updatePlaybackInfo, 5000);
+setInterval(updatePlaybackInfo, 1000);
 // Function to send a pause or resume command to MPV
 function togglePause() {
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+	const apiUrl = apiUrlMPV; // Replace with your API URL
 	// Define current state of playback
 	let pauseState = document.getElementById('pauseButton').textContent.trim().toLowerCase() === 'pause';
 	// Define command based on current state
@@ -438,7 +460,7 @@ document.getElementById('pauseButton').addEventListener('click', togglePause);
 // Function to set volume
 function setVolume() {
 	const volume = document.getElementById('volumeSlider').value;
-	const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+	const apiUrl = apiUrlMPV; // Replace with your API URL
 	// Send volume command to MPV
 	sendRequest(apiUrl, {
 		command: ['set_property', 'volume', volume]
