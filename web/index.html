@@ -1,20 +1,582 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POST Request Example</title>
-    <meta name="referrer" content="noreferrer" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karaoke PSU</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding-top: 100px; /* Space for fixed header */
+    }
+    .video-thumbnail {
+      cursor: pointer;
+    }
+    .video-thumbnail.selected {
+      border: 2px solid #007bff;
+    }
+    .playlist-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+    }
+    .fixed-footer, .fixed-header {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      background-color: #f8f9fa;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    .fixed-header {
+      top: 0;
+    }
+    .fixed-footer {
+      bottom: 0;
+    }
+      .toggle-button {
+    cursor: pointer;
+  }
+  </style>
 </head>
 <body>
-    <h1>Send Command to MPV</h1>
-    <form id="myForm">
-        <label for="command">Command:</label>
-        <input type="text" id="command" name="command">
-        <button type="submit">Submit</button>
-    </form>
-    <ul id="resultList"></ul>
 
-    <script src="script.js"></script>
+<div class="fixed-header">
+  <div class="container d-flex justify-content-between align-items-center">
+
+            <button id="restartVideoButton" class="btn btn-info btn-sm btn-block" style="margin:5px;">Restart</button>
+
+            <button id="pauseButton" class="btn btn-info btn-sm btn-block" style="margin:5px;">Pause</button>
+
+
+            <label for="volumeSlider" class="form-label" style="margin:5px;">Volume:</label>
+            <input type="range"  id="volumeSlider" min="0" max="100" value="50" style="margin:5px;">
+
+
+
+
+    <div id="playbackInfo" style="margin:5px;"></div>
+
+    <button id="playNextVideoButton" class="btn btn-success btn-sm btn-block" style="margin:5px;">Play Next Video</button>
+    <button id="toggleButton" class="btn btn-lg toggle-button btn-danger">Auto Play</button>
+  </div>
+</div>
+
+<div class="container my-5">
+  <h1 class="text-center">Karaoke PSU</h1>
+  <div class="row">
+    <div class="col-md-8">
+      <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search videos...">
+      <div id="videoResults" class="row"></div>
+    </div>
+    <div class="col-md-4">
+      <h3>Playlist</h3>
+      <ul id="playlist" class="list-group"></ul>
+    </div>
+  </div>
+</div>
+
+<div class="fixed-footer">
+  <div class="container text-center">
+    <button id="prevButton" class="btn btn-secondary">Previous</button>
+    <button id="nextButton" class="btn btn-secondary">Next</button>
+    <button id="addToPlaylistButton" class="btn btn-primary">Add to Playlist (End)</button>
+    <button id="addToBeginningButton" class="btn btn-primary">Add to Playlist (Beginning)</button>
+    <button id="refreshPlaylistButton" class="btn btn-info">Refresh Playlist</button>
+    <button id="clearPlaylistButton" class="btn btn-danger">Clear Playlist</button>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+<script>
+  const apiUrl = 'https://invidious.fdn.fr/api/v1';
+  let playlist = JSON.parse(localStorage.getItem('playlist')) || [];
+  let selectedVideos = [];
+  let currentPage = 1;
+  let searchQuery = '';
+  let currentlyPlaying = null;
+  let autoPlay = false;
+
+  const toggleButton = document.getElementById('toggleButton');
+
+  toggleButton.addEventListener('click', function() {
+    // Toggle the boolean value
+    autoPlay = !autoPlay;
+
+    // Change button color based on the boolean value
+    if (autoPlay) {
+      toggleButton.classList.remove('btn-danger');
+      toggleButton.classList.add('btn-success');
+      toggleButton.textContent = "Auto Play";
+    } else {
+      toggleButton.classList.remove('btn-success');
+      toggleButton.classList.add('btn-danger');
+      toggleButton.textContent = "Auto Play";
+    }
+  });
+
+
+
+  // Function to fetch videos from Invidious API
+  async function searchVideos(query, page = 1) {
+    const response = await fetch(`${apiUrl}/search?q=${query}&page=${page}`);
+    const data = await response.json();
+    return data;
+  }
+
+  // Function to render video thumbnails
+  function renderVideoThumbnails(videos) {
+    const videoResults = document.getElementById('videoResults');
+    videoResults.innerHTML = '';
+
+    videos.forEach(video => {
+      const thumbnailUrl = video.videoThumbnails[4]?.url;
+      const title = video.title;
+      const videoId = video.videoId;
+
+      const thumbnail = document.createElement('div');
+      thumbnail.classList.add('col-md-4', 'video-thumbnail');
+      thumbnail.innerHTML = `
+        <div class="card mb-3">
+          <img src="${thumbnailUrl}" class="card-img-top" alt="${title}">
+          <div class="card-body">
+            <h5 class="card-title">${title}</h5>
+          </div>
+        </div>
+      `;
+      thumbnail.addEventListener('click', () => selectVideo(thumbnail, video));
+      videoResults.appendChild(thumbnail);
+    });
+  }
+
+  // Function to handle video selection
+  function selectVideo(thumbnail, video) {
+    if (thumbnail.classList.contains('selected')) {
+      thumbnail.classList.remove('selected');
+      selectedVideos = selectedVideos.filter(v => v.videoId !== video.videoId);
+    } else {
+      thumbnail.classList.add('selected');
+      selectedVideos.push(video);
+    }
+  }
+
+  // Function to add selected videos to playlist (end)
+  function addToPlaylist() {
+    selectedVideos.forEach(video => {
+      if (!playlist.find(item => item.videoId === video.videoId)) {
+        playlist.push(video);
+      }
+    });
+    renderPlaylist();
+    savePlaylist();
+    clearSelection();
+  }
+
+  // Function to add selected videos to the beginning of the playlist
+  function addToBeginning() {
+    selectedVideos.forEach(video => {
+      if (!playlist.find(item => item.videoId === video.videoId)) {
+        playlist.unshift(video);
+      }
+    });
+    renderPlaylist();
+    savePlaylist();
+    clearSelection();
+  }
+
+  // Function to render playlist
+  function renderPlaylist() {
+    const playlistElement = document.getElementById('playlist');
+    playlistElement.innerHTML = '';
+
+    playlist.forEach((item, index) => {
+      const listItem = document.createElement('li');
+      listItem.classList.add('list-group-item', 'playlist-item');
+      listItem.innerHTML = `
+        <span>${index + 1}. ${item.title}</span>
+        <button class="btn btn-danger btn-sm" onclick="removeFromPlaylist(${index})">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      `;
+      playlistElement.appendChild(listItem);
+    });
+
+    // Initialize SortableJS for the playlist
+    new Sortable(playlistElement, {
+      animation: 150,
+      onEnd: (event) => {
+        const movedItem = playlist.splice(event.oldIndex, 1)[0];
+        playlist.splice(event.newIndex, 0, movedItem);
+        savePlaylist();
+        renderPlaylist(); // Re-render to update the order
+      }
+    });
+  }
+
+  // Function to clear selection
+  function clearSelection() {
+    selectedVideos = [];
+    const thumbnails = document.querySelectorAll('.video-thumbnail.selected');
+    thumbnails.forEach(thumbnail => thumbnail.classList.remove('selected'));
+  }
+
+  // Function to remove video from playlist
+  function removeFromPlaylist(index) {
+    playlist.splice(index, 1);
+    savePlaylist();
+    renderPlaylist();
+  }
+
+function playNextVideo() {
+    if (playlist.length > 0) {
+        const nextVideo = playlist.shift();
+        currentlyPlaying = nextVideo;
+        savePlaylist();
+        renderPlaylist();
+        // Send the next video to MPV
+        sendToMPV(nextVideo)
+            .then(response => {
+                // Parse the MPV response
+                const responseData = JSON.parse(response);
+                // Check if the response includes "error": "success"
+                if (responseData.error === "success") {
+                    // Set videoLoaded to true if the response is successful
+                    videoWaitingPlay = true;
+                } else {
+                    // Handle error if the response is not successful
+                    console.error('Error playing next video:', responseData.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error playing next video:', error);
+                // Handle error if there is an issue with the request
+            });
+        console.log(nextVideo);
+    } else {
+        // No video in the playlist, handle accordingly
+    }
+}
+
+
+  // Function to restart the current video
+  function restartVideo() {
+    if (currentlyPlaying) {
+      //document.getElementById('currentlyPlaying').textContent = `Now playing: ${currentlyPlaying.title}`;
+      sendToMPV(currentlyPlaying);
+    }
+  }
+
+  // Function to save playlist to localStorage
+  function savePlaylist() {
+    localStorage.setItem('playlist', JSON.stringify(playlist));
+  }
+
+ // Function to clear the playlist
+function clearPlaylist() {
+    playlist = []; // Clear the playlist array
+    savePlaylist(); // Save the empty playlist to localStorage
+    renderPlaylist(); // Update the UI to reflect the changes
+}
+
+// Function to send video URL to MPV
+function sendToMPV(video) {
+    const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+    console.log(video);
+    // Define the POST request body containing the video URL
+    const requestBody = JSON.stringify({
+        command: ['loadfile', 'https://www.youtube.com/watch?v='+video.videoId]
+    });
+
+    // Define POST request options
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: requestBody
+    };
+
+    // Send POST request to the API
+    fetch(apiUrl, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to send command to MPV');
+            }
+            console.log('Command sent successfully to MPV');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+function isMPVPidle() {
+    const apiUrl = 'http://localhost:8080/post'; // Replace with your MPV API URL
+
+    // Send request to MPV to get current pause state
+    return sendRequest(apiUrl, { command: ['get_property', 'idle-active'] })
+        .then(response => {
+            // Parse the MPV response
+            const responseData = response['data'];
+
+            // Extract the pause state from the response
+            const isIdle = responseData;
+            // Return true if MPV is playing, false otherwise
+            return isIdle;
+        })
+        .catch(error => {
+            console.error('Error checking if MPV is playing:', error);
+            // Return false if there is an error
+            return false;
+        });
+}
+
+function isMPVPlaying() {
+    const apiUrl = 'http://localhost:8080/post'; // Replace with your MPV API URL
+
+    // Send request to MPV to get current pause state
+    return sendRequest(apiUrl, { command: ['get_property', 'pause'] })
+        .then(response => {
+            // Parse the MPV response
+            const responseData = response['data'];
+            // Extract the pause state from the response
+            const isPaused = responseData;
+            // Return true if MPV is playing, false otherwise
+            return !isPaused; // Invert the pause state to determine if MPV is playing
+        })
+        .catch(error => {
+            console.error('Error checking if MPV is playing:', error);
+            // Return false if there is an error
+            return false;
+        });
+}
+
+
+// Function to update playback time and total duration
+function updatePlaybackInfo() {
+    const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+
+    // Make separate POST requests to get playback time and total duration
+    Promise.all([
+        sendRequest(apiUrl, { command: ['get_property', 'time-pos'] }),
+        sendRequest(apiUrl, { command: ['get_property', 'duration'] }),
+         sendRequest(apiUrl, { command: ['get_property', 'media-title'] }),
+         sendRequest(apiUrl, { command: ['get_property', 'volume'] })
+    ]).then(responses => {
+        const timePos = responses[0]['data'];
+        const duration = responses[1]['data'];
+        const title = responses[2]['data'];
+        const volume = responses[3]['data'];
+
+        // Convert playback time and duration from seconds to HH:MM:SS format
+        const playbackTime = formatTime(timePos);
+        const totalDuration = formatTime(duration);
+
+
+        // Update HTML to display playback time, total duration, and video title
+        document.getElementById('playbackInfo').innerHTML = `
+            <strong>Playback:</strong> ${playbackTime} / ${totalDuration}<br>
+            <strong>Title:</strong> ${title}
+        `;
+
+
+        const volumeSlider = document.getElementById('volumeSlider');
+        volumeSlider.value = volume;
+
+         if (typeof timePos === 'undefined' && typeof duration === 'undefined') {
+            // Playback has ended
+            isMPVPidle()
+    .then(isIdle => {
+        if (isIdle) {
+                        if (playlist.length > 0 && autoPlay) {
+                // Play next video if playlist is not empty
+                playNextVideo();
+            }
+        }
+    });
+
+
+
+        } else {
+        isMPVPlaying()
+    .then(isPlaying => {
+        if (isPlaying) {
+         document.getElementById('pauseButton').textContent = 'Pause';
+           videoWaitingPlay = false;
+        } else {
+         document.getElementById('pauseButton').textContent = 'Resume';
+        }
+    });
+
+        }
+
+    }).catch(error => {
+        console.error('Error:', error);
+        // Display error message in console
+    });
+}
+
+// Function to format time from seconds to HH:MM:SS format
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+// Function to make a POST request
+function sendRequest(url, requestBody) {
+    // Define POST request options
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    };
+
+    // Send POST request and return response JSON
+    return fetch(url, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to send request');
+            }
+            return response.json(); // Parse response JSON
+        });
+}
+
+// Call updatePlaybackInfo function every 5 seconds
+setInterval(updatePlaybackInfo, 5000);
+
+    // Function to send a pause or resume command to MPV
+    function togglePause() {
+        const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+
+        // Define current state of playback
+        let pauseState = document.getElementById('pauseButton').textContent.trim().toLowerCase() === 'pause';
+
+        // Define command based on current state
+        const command = pauseState ? ['set_property', 'pause', true] : ['set_property', 'pause', false];
+
+        // Send command to MPV
+        sendRequest(apiUrl, { command: command })
+            .then(() => {
+                // Update button text based on new state
+                document.getElementById('pauseButton').textContent = pauseState ? 'Resume' : 'Pause';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Display error message in console
+            });
+    }
+
+    // Attach click event listener to the pause button
+    document.getElementById('pauseButton').addEventListener('click', togglePause);
+
+
+
+    // Function to set volume
+    function setVolume() {
+        const volume = document.getElementById('volumeSlider').value;
+        const apiUrl = 'http://localhost:8080/post'; // Replace with your API URL
+
+        // Send volume command to MPV
+        sendRequest(apiUrl, { command: ['set_property', 'volume', volume] })
+            .catch(error => {
+                console.error('Error:', error);
+                // Display error message in console
+            });
+    }
+
+
+    // Attach click event listener to the pause button
+    document.getElementById('pauseButton').addEventListener('click', togglePause);
+
+    // Attach input event listener to the volume slider
+    document.getElementById('volumeSlider').addEventListener('input', setVolume);
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load playlist from localStorage
+    playlist = JSON.parse(localStorage.getItem('playlist')) || [];
+
+    // Render the playlist
+    renderPlaylist();
+});
+
+// Function to refresh the playlist
+function refreshPlaylist() {
+    playlist = JSON.parse(localStorage.getItem('playlist')) || []; // Reload playlist from localStorage
+    renderPlaylist(); // Update the UI to reflect the changes
+}
+
+
+// Function to perform search
+async function performSearch() {
+    const searchInput = document.getElementById('searchInput');
+    searchQuery = searchInput.value.trim();
+    if (searchQuery !== '') {
+        currentPage = 1;
+        const videos = await searchVideos(searchQuery, currentPage);
+        renderVideoThumbnails(videos);
+    }
+}
+
+// Event listener for input event on search input
+document.getElementById('searchInput').addEventListener('input', async (event) => {
+    await performSearch();
+});
+
+// Event listener for keydown event on search input
+document.getElementById('searchInput').addEventListener('keydown', async (event) => {
+    if (event.key === 'Enter') {
+        await performSearch();
+    }
+});
+
+
+  // Event listener for "Add to Playlist" button
+  document.getElementById('addToPlaylistButton').addEventListener('click', addToPlaylist);
+
+  // Event listener for "Add to Beginning" button
+  document.getElementById('addToBeginningButton').addEventListener('click', addToBeginning);
+
+  // Event listener for "Previous" button
+  document.getElementById('prevButton').addEventListener('click', async () => {
+    if (currentPage > 1) {
+      currentPage--;
+      const videos = await searchVideos(searchQuery, currentPage);
+      renderVideoThumbnails(videos);
+    }
+  });
+
+  // Event listener for "Next" button
+  document.getElementById('nextButton').addEventListener('click', async () => {
+    currentPage++;
+    const videos = await searchVideos(searchQuery, currentPage);
+    renderVideoThumbnails(videos);
+  });
+
+  // Event listeners for the fixed header buttons
+  document.getElementById('playNextVideoButton').addEventListener('click', playNextVideo);
+  document.getElementById('restartVideoButton').addEventListener('click', restartVideo);
+
+  // Event listener for "Clear Playlist" button
+document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
+
+// Event listener for "Refresh Playlist" button
+document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
+
+
+
+</script>
+
+<!-- Font Awesome for Trash Icon -->
+<script src="https://kit.fontawesome.com/a076d05399.js"></script>
 </body>
 </html>
