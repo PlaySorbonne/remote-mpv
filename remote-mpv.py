@@ -140,6 +140,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Start Flask server and MPV listener.')
     parser.add_argument(
+        '-H', '--host', type=str, default='0.0.0.0',
+        help='Host IP address')
+    parser.add_argument(
         '-p', '--port', type=int, default=8000,
         help='Port number for Flask server')
     parser.add_argument(
@@ -181,4 +184,4 @@ if __name__ == '__main__':
     app.static_folder = args.directory
 
     # Start the Flask web server
-    app.run(debug=False, port=args.port)
+    app.run(debug=False, host=args.host, port=args.port)
