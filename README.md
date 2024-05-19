@@ -1,29 +1,18 @@
 # REMOTE MPV
-Basic HTTP server which handles POST requests and forward their content to a UNIX socket
+MPV player remote control
 
 ## Build and run
 
 ### Requirements
-- C compiler
-- libc
-- libmagic
-- support for unix sockets
-
-### to build
-```sh
-make build
-```
+- mpv
+- python 3
+- python 3 Flask framework
 
 ### to run
-first launch mpv with socket ipc :
 ```sh
-mpv --profile=pseudo-gui --input-ipc-server=/tmp/mpvsocket --idle
+python remote-mpv.py
 ```
-then launch the server with :
+view help with
 ```sh
-make run
-```
-or with: 
-```sh
-build/out/remote-mpv -p 8080 -s /tmp/mpvsocket -d web
+python remote-mpv.py --help
 ```

@@ -3,7 +3,10 @@ import socket
 import json
 import time
 import threading
-from flask import Flask, request, jsonify
+import os
+import subprocess
+import shutil
+from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__)
 
@@ -11,8 +14,18 @@ app = Flask(__name__)
 property_values = {}
 
 
+def command_exists(command):
+    # Check if the command exists in the system
+    return shutil.which(command) is not None
+
+
+def is_writable(path):
+    # Check if the path is writable
+    return os.access(path, os.W_OK)
+
+
 def process_event(event):
-    if event.get('event') == 'property-change' and 'name' in event and 'data' in event:
+    if 'name' in event and 'data' in event:
         property_name = event['name']
         property_value = event['data']
         property_values[property_name] = property_value
@@ -53,18 +66,33 @@ def command():
         return jsonify({'error': str(e)}), 500
 
 
+# Route for serving index.html at the root URL
+@app.route('/')
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+# Route for serving files from the app.static_folder directory
+@app.route('/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
+
+
 # Connect to the MPV IPC socket
 def start_mpv_listener(mpvsocketpath):
     global client_get
     global client_set
     client_get = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     client_set = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
     try:
         client_get.connect(mpvsocketpath)
         client_set.connect(mpvsocketpath)
         print("Connected to MPV socket")
     except Exception as e:
         print(f"Failed to connect to MPV socket: {e}")
+        time.sleep(2)
+        start_mpv_listener(mpvsocketpath)
         return
 
     # List of properties to observe
@@ -112,18 +140,45 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Start Flask server and MPV listener.')
     parser.add_argument(
-        '-p', '--port', type=int, default=5000,
+        '-p', '--port', type=int, default=8000,
         help='Port number for Flask server')
     parser.add_argument(
-        '-s', '--socket', type=str, required=True,
+        '-s', '--socket', type=str, default="/tmp/mvpsocket",
         help='Path to the MPV socket')
+    parser.add_argument(
+        '-d', '--directory', type=str, default="web",
+        help='Directory for serving HTML pages')
     args = parser.parse_args()
+
+    if not command_exists("mpv"):
+        print("mpv not installed")
+        exit()
+
+    if not is_writable(args.socket):
+        print(f"{args.socket} is not writable")
+        exit()
+
+    # Additional arguments for mpv
+    mpv_arguments = ['--profile=pseudo-gui',
+                     '--input-ipc-server=' + args.socket, '--idle']
+
+    # Command to launch mpv player witH additional arguments
+    command = ['mpv'] + mpv_arguments
+
+    # Launch the mpv player process
+    subprocess.Popen(command)
 
     # Run the MPV listener in a separate thread
     mpv_thread = threading.Thread(
         target=start_mpv_listener, args=(args.socket,))
     mpv_thread.daemon = True
     mpv_thread.start()
+
+    # Set directory for serving HTML pages
+    args.directory = os.path.abspath(args.directory)
+
+    # Set the static folder for Flask application
+    app.static_folder = args.directory
 
     # Start the Flask web server
     app.run(debug=False, port=args.port)

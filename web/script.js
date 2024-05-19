@@ -8,7 +8,7 @@ let autoPlay = false;
 
 
 // Define a global variable to hold the API URL
-let apiUrlMPV = 'http://localhost:5000';
+let apiUrlMPV = 'http://localhost:8000';
 
 
 
@@ -379,7 +379,7 @@ function sendCommand(requestBody) {
 		return response.json(); // Parse response JSON
 	});
 }
-// Call updatePlaybackInfo function every 5 seconds
+// Call updatePlaybackInfo function every 2 seconds
 setInterval(updatePlaybackInfo, 1000);
 // Function to send a pause or resume command to MPV
 function togglePause() {
