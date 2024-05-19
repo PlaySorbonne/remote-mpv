@@ -5,7 +5,8 @@ let currentPage = 1;
 let searchQuery = '';
 let currentlyPlaying = null;
 let autoPlay = false;
-
+let sliderPos = 0;
+let sliderMoved = false;
 
 // Define a global variable to hold the API URL
 let apiUrlMPV = 'http://localhost:8000';
@@ -254,8 +255,9 @@ function playNextVideo() {
 			const responseData = JSON.parse(response);
 			// Check if the response includes "error": "success"
 			if (responseData.error === "success") {
-				// Set videoLoaded to true if the response is successful
-				videoWaitingPlay = true;
+				const progressSlider = document.getElementById("progressSlider");
+				sliderPos = 0;
+				progressSlider.value = sliderPos;
 			} else {
 				// Handle error if the response is not successful
 				console.error('Error playing next video:', responseData.error);
@@ -332,6 +334,18 @@ function updatePlaybackInfo() {
 
 		const volumeSlider = document.getElementById('volumeSlider');
 		volumeSlider.value = volume;
+
+
+		// Get the progress slider element
+		const progressSlider = document.getElementById("progressSlider");
+		progressSlider.max = duration;
+
+		if (sliderMoved) {
+			setPlaybackTime(sliderPos);
+			sliderMoved=false;
+		} else {
+			progressSlider.value=timePos;
+		}
 
 		if (isIdle) {
 			if (playlist.length > 0 && autoPlay) {
@@ -471,3 +485,20 @@ document.getElementById('restartVideoButton').addEventListener('click', restartV
 document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
 // Event listener for "Refresh Playlist" button
 document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
+
+document.getElementById('progressSlider').addEventListener("input", function() {
+	sliderPos=document.getElementById('progressSlider').value;
+	sliderMoved=true;
+});
+
+
+
+function setPlaybackTime(playbackTime) {
+	// Send playbackTime command to MPV
+	sendCommand({
+		command: ['set_property', 'playback-time', playbackTime]
+	}).catch(error => {
+		console.error('Error:', error);
+		// Display error message in console
+	});
+}
