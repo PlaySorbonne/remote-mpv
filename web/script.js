@@ -15,13 +15,13 @@ let apiUrlMPV = 'http://localhost:8000';
 
 // Function to set the global variable with input field content
 function setApiUrl() {
-    // Get the input field value
-    apiUrlMPV = document.getElementById('apiUrlInput').value;
+	// Get the input field value
+	apiUrlMPV = document.getElementById('apiUrlInput').value;
 
-    // Optionally, you can perform validation or sanitization here
+	// Optionally, you can perform validation or sanitization here
 
-    // Log the API URL for testing (you can remove this in production)
-    console.log('API URL set to:', apiUrlMPV);
+	// Log the API URL for testing (you can remove this in production)
+	console.log('API URL set to:', apiUrlMPV);
 }
 
 // Add an event listener to the submit button
@@ -137,13 +137,13 @@ function renderVideoThumbnails(videos) {
 		const thumbnail = document.createElement('div');
 		thumbnail.classList.add('col-md-4', 'video-thumbnail');
 		thumbnail.innerHTML = `
-      <div class="card mb-3 hover">
-        <img src="${thumbnailUrl}" class="card-img-top" alt="${title}">
-        <div class="card-body">
-          <h5 class="card-title" title="${title}">${title}</h5>
-        </div>
-      </div>
-    `;
+		<div class="card mb-3 hover">
+		<img src="${thumbnailUrl}" class="card-img-top" alt="${title}">
+		<div class="card-body">
+		<h5 class="card-title" title="${title}">${title}</h5>
+		</div>
+		</div>
+		`;
 		const card = thumbnail.querySelector('.card.mb-3');
 		card.addEventListener('click', () => selectVideo(thumbnail, video));
 		videoResults.appendChild(thumbnail);
@@ -194,8 +194,8 @@ function renderPlaylist() {
 		const listItem = document.createElement('li');
 		listItem.classList.add('list-group-item', 'playlist-item');
 		listItem.innerHTML = `
-            <span class="playlist-title" title="${item.title}">${index + 1}. ${item.title}</span>
-        `;
+		<span class="playlist-title" title="${item.title}">${index + 1}. ${item.title}</span>
+		`;
 		playlistElement.appendChild(listItem);
 
 		// Create container for delete button
@@ -206,8 +206,8 @@ function renderPlaylist() {
 		const deleteButton = document.createElement('button');
 		deleteButton.classList.add('btn', 'btn-danger', 'btn-sm');
 		deleteButton.innerHTML = `
-            <img src="trash-solid.svg" alt="Delete" width="16" height="16">
-        `;
+		<img src="trash-solid.svg" alt="Delete" width="16" height="16">
+		`;
 		deleteButton.addEventListener('click', () => removeFromPlaylist(index));
 
 		// Append delete button to its container
@@ -342,9 +342,9 @@ function updatePlaybackInfo() {
 
 		if (sliderMoved) {
 			setPlaybackTime(sliderPos);
-			sliderMoved=false;
+			sliderMoved = false;
 		} else {
-			progressSlider.value=timePos;
+			progressSlider.value = timePos;
 		}
 
 		if (isIdle) {
@@ -487,8 +487,8 @@ document.getElementById('clearPlaylistButton').addEventListener('click', clearPl
 document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
 
 document.getElementById('progressSlider').addEventListener("input", function() {
-	sliderPos=document.getElementById('progressSlider').value;
-	sliderMoved=true;
+	sliderPos = document.getElementById('progressSlider').value;
+	sliderMoved = true;
 });
 
 

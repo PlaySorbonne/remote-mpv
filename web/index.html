@@ -12,39 +12,45 @@
       <div class="container-fluid">
         <div class="row align-items-center">
           <div class="col-auto">
-            <button id="restartVideoButton" class="btn btn-info btn-sm">Restart</button>
-            <button id="pauseButton" class="btn btn-info btn-sm">Pause</button>
-            <label for="volumeSlider" class="form-label">Volume:</label>
-            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            <div>
+              <button id="restartVideoButton" class="btn btn-info btn-sm">Restart</button>
+              <button id="pauseButton" class="btn btn-info btn-sm">Pause</button>
+            </div>
+            <div>
+              <label for="volumeSlider" class="form-label">Volume:</label>
+              <input type="range" id="volumeSlider" min="0" max="100" value="50">
+            </div>
           </div>
           <div class="col">
-          <div class="row">
-            <div id="playbackInfo"></div>
-        <input type="range" min="0" max="100" value="0" class="custom-range" id="progressSlider">
-    </div>
+            <div class="row">
+              <div id="playbackInfo"></div>
+              <input type="range" min="0" max="100" value="0" class="custom-range" id="progressSlider">
+            </div>
           </div>
           <div class="col-auto">
             <button id="playNextVideoButton" class="btn btn-success btn-sm">Play Next Video</button>
           </div>
-                    <div class="col-auto">
+          <div class="col-auto">
             <input type="text" id="apiUrlInput" class="form-control" placeholder="API URL">
-
           </div>
           <div class="col-auto">
-          <button id="apiSubmitButton" class="btn btn-primary btn-sm">Submit</button>
-
+            <button id="apiSubmitButton" class="btn btn-primary btn-sm">Submit</button>
+          </div>
+          <div class="col-auto">
             <button id="toggleButton" class="btn btn-sm toggle-button btn-danger">Auto Play</button>
+          </div>
+          <div class="col-auto">
             <button id="darkModeButton" class="btn btn-dark btn-sm">Dark Mode</button>
           </div>
         </div>
       </div>
     </div>
     <div class="container my-5 ">
-        <div class="text-center align-items-center d-flex justify-content-center mb-3">
-            <img src="psu.svg" alt="Image" class="img-fluid align-middle me-2" style="height: 3em;">
-            <h1 class="d-inline mb-0">Karaoke PSU</h1>
-            <img src="FOK.png" alt="Image" class="img-fluid align-middle me-2" style="height: 5em;">
-        </div>
+      <div class="text-center align-items-center d-flex justify-content-center mb-3">
+        <img src="psu.svg" alt="Image" class="img-fluid align-middle me-2" style="height: 3em;">
+        <h1 class="d-inline mb-0">Karaoke PSU</h1>
+        <img src="FOK.png" alt="Image" class="img-fluid align-middle me-2" style="height: 5em;">
+      </div>
       <div class="row">
         <div class="col-lg-8">
           <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search videos...">
