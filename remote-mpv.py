@@ -1,3 +1,5 @@
+#!/bin/python3
+
 import argparse
 import socket
 import json
@@ -19,9 +21,16 @@ def command_exists(command):
     return shutil.which(command) is not None
 
 
-def is_writable(path):
-    # Check if the path is writable
-    return os.access(path, os.W_OK)
+def can_create_mpv_socket(filepath):
+    try:
+        # Try to create the file
+        with open(filepath, 'w') as f:
+            pass
+        # If the file was created successfully, remove it
+        os.remove(filepath)
+        return True
+    except (OSError, IOError) as e:
+        return False
 
 
 def process_event(event):
@@ -157,7 +166,7 @@ if __name__ == '__main__':
         print("mpv not installed")
         exit()
 
-    if not is_writable(args.socket):
+    if not can_create_mpv_socket(args.socket):
         print(f"{args.socket} is not writable")
         exit()
 
