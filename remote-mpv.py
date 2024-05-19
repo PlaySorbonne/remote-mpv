@@ -21,6 +21,11 @@ def command_exists(command):
     return shutil.which(command) is not None
 
 
+def is_writable(path):
+    # Check if the path is writable
+    return os.access(path, os.W_OK)
+
+
 def can_create_mpv_socket(filepath):
     try:
         # Try to create the file
@@ -155,7 +160,7 @@ if __name__ == '__main__':
         '-p', '--port', type=int, default=8000,
         help='Port number for Flask server')
     parser.add_argument(
-        '-s', '--socket', type=str, default="/tmp/mvpsocket",
+        '-s', '--socket', type=str, default="/tmp/mpvsocket",
         help='Path to the MPV socket')
     parser.add_argument(
         '-d', '--directory', type=str, default="web",
@@ -166,9 +171,10 @@ if __name__ == '__main__':
         print("mpv not installed")
         exit()
 
-    if not can_create_mpv_socket(args.socket):
-        print(f"{args.socket} is not writable")
-        exit()
+    if not is_writable(args.socket):
+        if not can_create_mpv_socket(args.socket):
+            print(f"{args.socket} is not writable")
+            exit()
 
     # Additional arguments for mpv
     mpv_arguments = ['--profile=pseudo-gui',
