@@ -8,7 +8,7 @@ let autoPlay = false;
 
 
 // Define a global variable to hold the API URL
-let apiUrlMPV = 'http://localhost:8080/post';
+let apiUrlMPV = 'http://localhost:5000';
 
 
 
@@ -288,128 +288,71 @@ function clearPlaylist() {
 }
 // Function to send video URL to MPV
 function sendToMPV(video) {
-	const apiUrl = apiUrlMPV; // Replace with your API URL
 	console.log(video);
 	// Define the POST request body containing the video URL
-	const requestBody = JSON.stringify({
+	const requestBody = {
 		command: ['loadfile', 'https://www.youtube.com/watch?v=' + video.videoId]
-	});
-	// Define POST request options
-	const requestOptions = {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: requestBody
 	};
-	// Send POST request to the API
-	fetch(apiUrl, requestOptions).then(response => {
-		if (!response.ok) {
-            console.log(response);
-			throw new Error('Failed to send command to MPV');
-		}
+
+	// Send POST request using sendCommand function
+	sendCommand(requestBody)
+	.then(() => {
 		console.log('Command sent successfully to MPV');
-	}).catch(error => {
+	})
+	.catch(error => {
 		console.error('Error:', error);
 	});
 }
 
-function isMPVPidle() {
-	const apiUrl = apiUrlMPV; // Replace with your MPV API URL
-	// Send request to MPV to get current pause state
-	return sendRequest(apiUrl, {
-		command: ['get_property', 'idle-active']
-	}).then(response => {
-		// Parse the MPV response
-		const responseData = response['data'];
-		// Extract the pause state from the response
-		const isIdle = responseData;
-		// Return true if MPV is playing, false otherwise
-		return isIdle;
-	}).catch(error => {
-		console.error('Error checking if MPV is playing:', error);
-		// Return false if there is an error
-		return false;
-	});
-}
 
-function isMPVPlaying() {
-	const apiUrl = apiUrlMPV; // Replace with your MPV API URL
-	// Send request to MPV to get current pause state
-	return sendRequest(apiUrl, {
-		command: ['get_property', 'pause']
-	}).then(response => {
-		// Parse the MPV response
-		const responseData = response['data'];
-		// Extract the pause state from the response
-		const isPaused = responseData;
-		// Return true if MPV is playing, false otherwise
-		return !isPaused; // Invert the pause state to determine if MPV is playing
-	}).catch(error => {
-		console.error('Error checking if MPV is playing:', error);
-		// Return false if there is an error
-		return false;
-	});
-}
 // Function to update playback time and total duration
 function updatePlaybackInfo() {
-	const apiUrl = apiUrlMPV; // Replace with your API URL
-	// Make separate POST requests to get playback time and total duration
-	Promise.all([
-		sendRequest(apiUrl, {
-			command: ['get_property', 'time-pos']
-		}),
-		sendRequest(apiUrl, {
-			command: ['get_property', 'duration']
-		}),
-		sendRequest(apiUrl, {
-			command: ['get_property', 'media-title']
-		}),
-		sendRequest(apiUrl, {
-			command: ['get_property', 'volume']
-		})
-	]).then(responses => {
-		const timePos = responses[0]['data'];
-		const duration = responses[1]['data'];
-		const title = responses[2]['data'];
-		const volume = responses[3]['data'];
+	const apiUrl = apiUrlMPV + '/properties'; // URL of your Flask server's /properties endpoint
+
+	// Make a single GET request to retrieve all properties
+	fetch(apiUrl)
+	.then(response => response.json())
+	.then(data => {
+		const timePos = data['playback-time'];
+		const duration = data['duration'];
+		const title = data['media-title'];
+		const volume = data['volume'];
+		const isIdle = data['idle-active'];
+		const isPaused = data['pause'];
+
 		// Convert playback time and duration from seconds to HH:MM:SS format
 		const playbackTime = formatTime(timePos);
 		const totalDuration = formatTime(duration);
+
 		// Update HTML to display playback time, total duration, and video title
 		document.getElementById('playbackInfo').innerHTML = `
+		<strong>Playback:</strong> ${playbackTime} / ${totalDuration}<br>
+		<strong>Title:</strong> ${title}
+		`;
 
-									<strong>Playback:</strong> ${playbackTime} / ${totalDuration}
-									<br>
-										<strong>Title:</strong> ${title}
-        `;
 		const volumeSlider = document.getElementById('volumeSlider');
 		volumeSlider.value = volume;
-		if (typeof timePos === 'undefined' && typeof duration === 'undefined') {
-			// Playback has ended
-			isMPVPidle().then(isIdle => {
-				if (isIdle) {
-					if (playlist.length > 0 && autoPlay) {
-						// Play next video if playlist is not empty
-						playNextVideo();
-					}
-				}
-			});
-		} else {
-			isMPVPlaying().then(isPlaying => {
-				if (isPlaying) {
-					document.getElementById('pauseButton').textContent = 'Pause';
-					videoWaitingPlay = false;
-				} else {
-					document.getElementById('pauseButton').textContent = 'Resume';
-				}
-			});
+
+		if (isIdle) {
+			if (playlist.length > 0 && autoPlay) {
+				// Play next video if playlist is not empty
+				playNextVideo();
+			}
 		}
-	}).catch(error => {
+		if (!isPaused) {
+			document.getElementById('pauseButton').textContent = 'Pause';
+			videoWaitingPlay = false;
+		} else {
+			document.getElementById('pauseButton').textContent = 'Resume';
+		}
+	})
+	.catch(error => {
 		console.error('Error:', error);
 		// Display error message in console
 	});
 }
+
+
 // Function to format time from seconds to HH:MM:SS format
 function formatTime(seconds) {
 	const hours = Math.floor(seconds / 3600);
@@ -418,7 +361,8 @@ function formatTime(seconds) {
 	return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 // Function to make a POST request
-function sendRequest(url, requestBody) {
+function sendCommand(requestBody) {
+	const apiUrl = apiUrlMPV + '/command';
 	// Define POST request options
 	const requestOptions = {
 		method: 'POST',
@@ -428,7 +372,7 @@ function sendRequest(url, requestBody) {
 		body: JSON.stringify(requestBody)
 	};
 	// Send POST request and return response JSON
-	return fetch(url, requestOptions).then(response => {
+	return fetch(apiUrl, requestOptions).then(response => {
 		if (!response.ok) {
 			throw new Error('Failed to send request');
 		}
@@ -439,13 +383,12 @@ function sendRequest(url, requestBody) {
 setInterval(updatePlaybackInfo, 1000);
 // Function to send a pause or resume command to MPV
 function togglePause() {
-	const apiUrl = apiUrlMPV; // Replace with your API URL
 	// Define current state of playback
 	let pauseState = document.getElementById('pauseButton').textContent.trim().toLowerCase() === 'pause';
 	// Define command based on current state
 	const command = pauseState ? ['set_property', 'pause', true] : ['set_property', 'pause', false];
 	// Send command to MPV
-	sendRequest(apiUrl, {
+	sendCommand({
 		command: command
 	}).then(() => {
 		// Update button text based on new state
@@ -460,9 +403,8 @@ document.getElementById('pauseButton').addEventListener('click', togglePause);
 // Function to set volume
 function setVolume() {
 	const volume = document.getElementById('volumeSlider').value;
-	const apiUrl = apiUrlMPV; // Replace with your API URL
 	// Send volume command to MPV
-	sendRequest(apiUrl, {
+	sendCommand({
 		command: ['set_property', 'volume', volume]
 	}).catch(error => {
 		console.error('Error:', error);
