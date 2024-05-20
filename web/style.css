@@ -1,6 +1,4 @@
-body {
-  padding-top: 100px; /* Space for fixed header */
-}
+
 .hover {
   cursor: pointer;
 }
@@ -117,4 +115,8 @@ body.dark-mode {
 
 .delete-button-container {
   margin-left: 10px; /* Adjust margin as needed */
+}
+
+#toggleDiv {
+justify-content: flex-end;
 }

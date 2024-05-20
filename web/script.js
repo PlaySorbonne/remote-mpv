@@ -1,15 +1,50 @@
-const apiUrl = 'https://invidious.fdn.fr/api/v1';
+const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1';
 let playlist = JSON.parse(localStorage.getItem('playlist')) || [];
 let selectedVideos = [];
 let currentPage = 1;
 let searchQuery = '';
 let currentlyPlaying = null;
-let autoPlay = false;
-let sliderPos = 0;
-let sliderMoved = false;
+let autoPlay = getBoolean('autoPlay') || false;
+let progressSliderPos = 0;
+let progressSliderMoved = false;
+let volumeSliderPos = 0;
+let volumeSliderMoved = false;
+let apiUrlMPV = localStorage.getItem('apiUrlMPV') || 'http://localhost:8000';
 
-// Define a global variable to hold the API URL
-let apiUrlMPV = 'http://localhost:8000';
+document.addEventListener('DOMContentLoaded', function() {
+	var toggleSettingsButton = document.getElementById('toggleSettings');
+	var toggleDiv = document.getElementById('toggleDiv');
+
+	toggleSettingsButton.addEventListener('click', function() {
+		if (toggleDiv.style.display === "none" || toggleDiv.style.display === "") {
+			toggleDiv.style.display = "flex";
+		} else {
+			toggleDiv.style.display = "none";
+		}
+		 adjustContentPadding();
+	});
+	   adjustContentPadding();
+
+});
+
+window.addEventListener('resize', adjustContentPadding);
+
+// Adjust content padding based on header height
+function adjustContentPadding() {
+	var headerHeight = document.querySelector('.fixed-header').offsetHeight;
+	document.querySelector('.container.my-5').style.paddingTop = headerHeight + 'px';
+}
+
+
+
+function saveBoolean(key, value) {
+	localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getBoolean(key) {
+	const value = localStorage.getItem(key);
+	return value !== null ? JSON.parse(value) : null;
+}
 
 
 
@@ -17,11 +52,8 @@ let apiUrlMPV = 'http://localhost:8000';
 function setApiUrl() {
 	// Get the input field value
 	apiUrlMPV = document.getElementById('apiUrlInput').value;
+	localStorage.setItem('apiUrlMPV', apiUrlMPV);
 
-	// Optionally, you can perform validation or sanitization here
-
-	// Log the API URL for testing (you can remove this in production)
-	console.log('API URL set to:', apiUrlMPV);
 }
 
 // Add an event listener to the submit button
@@ -48,8 +80,19 @@ document.addEventListener('DOMContentLoaded', function() {
 	if (darkMode === 'enabled') {
 		document.body.classList.add('dark-mode');
 	}
+	const autoPlay = getBoolean('autoPlay');
+	if (autoPlay) {
+		toggleAutoPlay.classList.remove('btn-danger');
+		toggleAutoPlay.classList.add('btn-success');
+		toggleAutoPlay.textContent = "Auto Play";
+	} else {
+		toggleAutoPlay.classList.remove('btn-success');
+		toggleAutoPlay.classList.add('btn-danger');
+		toggleAutoPlay.textContent = "Auto Play";
+	}
+
 });
-const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1'; // Replace with your preferred Invidious instance if needed
+
 
 // Function to fetch video details from Invidious API
 async function fetchVideoDetails(videoId) {
@@ -105,24 +148,25 @@ function extractVideoIdFromUrl(url) {
 document.getElementById('addUrlButton').addEventListener('click', addVideoByUrl);
 
 
-const toggleButton = document.getElementById('toggleButton');
-toggleButton.addEventListener('click', function() {
+const toggleAutoPlay = document.getElementById('toggleAutoPlay');
+toggleAutoPlay.addEventListener('click', function() {
 	// Toggle the boolean value
 	autoPlay = !autoPlay;
+	saveBoolean('autoPlay', autoPlay);
 	// Change button color based on the boolean value
 	if (autoPlay) {
-		toggleButton.classList.remove('btn-danger');
-		toggleButton.classList.add('btn-success');
-		toggleButton.textContent = "Auto Play";
+		toggleAutoPlay.classList.remove('btn-danger');
+		toggleAutoPlay.classList.add('btn-success');
+		toggleAutoPlay.textContent = "Auto Play";
 	} else {
-		toggleButton.classList.remove('btn-success');
-		toggleButton.classList.add('btn-danger');
-		toggleButton.textContent = "Auto Play";
+		toggleAutoPlay.classList.remove('btn-success');
+		toggleAutoPlay.classList.add('btn-danger');
+		toggleAutoPlay.textContent = "Auto Play";
 	}
 });
 // Function to fetch videos from Invidious API
 async function searchVideos(query, page = 1) {
-	const response = await fetch(`${apiUrl}/search?q=${query}&page=${page}&type=video&region=FR`);
+	const response = await fetch(`${invidiousApiUrl}/search?q=${query}&page=${page}&type=video&region=FR`);
 	const data = await response.json();
 	return data;
 }
@@ -256,8 +300,8 @@ function playNextVideo() {
 			// Check if the response includes "error": "success"
 			if (responseData.error === "success") {
 				const progressSlider = document.getElementById("progressSlider");
-				sliderPos = 0;
-				progressSlider.value = sliderPos;
+				progressSliderPos = 0;
+				progressSlider.value = progressSliderPos;
 			} else {
 				// Handle error if the response is not successful
 				console.error('Error playing next video:', responseData.error);
@@ -332,19 +376,25 @@ function updatePlaybackInfo() {
 		<strong>Title:</strong> ${title}
 		`;
 
-		const volumeSlider = document.getElementById('volumeSlider');
-		volumeSlider.value = volume;
-
 
 		// Get the progress slider element
 		const progressSlider = document.getElementById("progressSlider");
 		progressSlider.max = duration;
 
-		if (sliderMoved) {
-			setPlaybackTime(sliderPos);
-			sliderMoved = false;
+		if (progressSliderMoved) {
+			setPlaybackTime(progressSliderPos);
+			progressSliderMoved = false;
 		} else {
 			progressSlider.value = timePos;
+		}
+
+
+		if (volumeSliderMoved) {
+			setVolume(volumeSliderPos);
+			volumeSliderMoved = false;
+		} else {
+			const volumeSlider = document.getElementById('volumeSlider');
+			volumeSlider.value = volume;
 		}
 
 		if (isIdle) {
@@ -415,8 +465,7 @@ function togglePause() {
 // Attach click event listener to the pause button
 document.getElementById('pauseButton').addEventListener('click', togglePause);
 // Function to set volume
-function setVolume() {
-	const volume = document.getElementById('volumeSlider').value;
+function setVolume(volume) {
 	// Send volume command to MPV
 	sendCommand({
 		command: ['set_property', 'volume', volume]
@@ -427,8 +476,14 @@ function setVolume() {
 }
 // Attach click event listener to the pause button
 document.getElementById('pauseButton').addEventListener('click', togglePause);
+
 // Attach input event listener to the volume slider
-document.getElementById('volumeSlider').addEventListener('input', setVolume);
+document.getElementById('volumeSlider').addEventListener("input", function() {
+	volumeSliderPos = document.getElementById('volumeSlider').value;
+	volumeSliderMoved = true;
+});
+
+
 document.addEventListener('DOMContentLoaded', function() {
 	// Load playlist from localStorage
 	playlist = JSON.parse(localStorage.getItem('playlist')) || [];
@@ -487,8 +542,8 @@ document.getElementById('clearPlaylistButton').addEventListener('click', clearPl
 document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
 
 document.getElementById('progressSlider').addEventListener("input", function() {
-	sliderPos = document.getElementById('progressSlider').value;
-	sliderMoved = true;
+	progressSliderPos = document.getElementById('progressSlider').value;
+	progressSliderMoved = true;
 });
 
 
