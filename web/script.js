@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
 		} else {
 			toggleDiv.style.display = "none";
 		}
-		 adjustContentPadding();
+		adjustContentPadding();
 	});
-	   adjustContentPadding();
+	adjustContentPadding();
 
 });
 
@@ -178,6 +178,7 @@ function renderVideoThumbnails(videos) {
 		const thumbnailUrl = video.videoThumbnails[4]?.url;
 		const title = video.title;
 		const videoId = video.videoId;
+		const author = video.author;
 		const thumbnail = document.createElement('div');
 		thumbnail.classList.add('col-md-4', 'video-thumbnail');
 		thumbnail.innerHTML = `
@@ -185,6 +186,7 @@ function renderVideoThumbnails(videos) {
 		<img src="${thumbnailUrl}" class="card-img-top" alt="${title}">
 		<div class="card-body">
 		<h5 class="card-title" title="${title}">${title}</h5>
+		<p class="card-text" title="${author}">${author}</p>
 		</div>
 		</div>
 		`;
@@ -539,7 +541,7 @@ document.getElementById('restartVideoButton').addEventListener('click', restartV
 // Event listener for "Clear Playlist" button
 document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
 // Event listener for "Refresh Playlist" button
-document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
+//document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
 
 document.getElementById('progressSlider').addEventListener("input", function() {
 	progressSliderPos = document.getElementById('progressSlider').value;

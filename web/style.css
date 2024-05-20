@@ -15,6 +15,19 @@
   height: 3.6em; /* Should be line-height * 3 to ensure 3 lines are displayed */
   white-space: normal;
 }
+
+.card-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-height: 1.2em; /* Adjust this line-height value as necessary */
+  height: 1.5em; /* Should be line-height * 3 to ensure 3 lines are displayed */
+  white-space: normal;
+}
+
+
 .playlist-item {
   display: flex;
   justify-content: space-between;
