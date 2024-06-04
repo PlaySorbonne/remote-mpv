@@ -9,6 +9,7 @@ import os
 import subprocess
 import shutil
 from flask import Flask, request, jsonify, send_from_directory
+from sys import stderr
 
 app = Flask(__name__)
 
@@ -29,65 +30,67 @@ def is_writable(path):
 def can_create_mpv_socket(filepath):
     try:
         # Try to create the file
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
+            print(f"{f.name} is writable")
             pass
         # If the file was created successfully, remove it
         os.remove(filepath)
         return True
     except (OSError, IOError) as e:
+        print(e, file=stderr)
         return False
 
 
 def process_event(event):
-    if 'name' in event and 'data' in event:
-        property_name = event['name']
-        property_value = event['data']
+    if "name" in event and "data" in event:
+        property_name = event["name"]
+        property_value = event["data"]
         property_values[property_name] = property_value
 
 
 def send_command(client, command):
     try:
-        message = json.dumps(command).encode() + b'\n'
+        message = json.dumps(command).encode() + b"\n"
         client.sendall(message)
         print(f"Sent command: {command}")
     except Exception as e:
         print(f"Error sending command: {e}")
 
 
-@app.route('/properties', methods=['GET'])
+@app.route("/properties", methods=["GET"])
 def get_properties():
     return jsonify(property_values)
 
 
-@app.route('/properties/<property_name>', methods=['GET'])
+@app.route("/properties/<property_name>", methods=["GET"])
 def get_property(property_name):
-    return jsonify({property_name: property_values.get(property_name,
-                                                       'Unknown')})
+    return jsonify({property_name: property_values.get(property_name, "Unknown")})
 
 
-@app.route('/command', methods=['POST'])
+@app.route("/command", methods=["POST"])
 def command():
     data = request.data
     if not data:
-        return jsonify({'error': 'No command provided'}), 400
+        return jsonify({"error": "No command provided"}), 400
 
     try:
         send_command(client_set, json.loads(data))
-        return jsonify({'status': 'command sent'}), 200
+        return jsonify({"status": "command sent"}), 200
     except json.JSONDecodeError as e:
-        return jsonify({'error': 'Invalid JSON format'}), 400
+        print(e, file=stderr)
+        return jsonify({"error": "Invalid JSON format"}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 # Route for serving index.html at the root URL
-@app.route('/')
+@app.route("/")
 def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, "index.html")
 
 
 # Route for serving files from the app.static_folder directory
-@app.route('/<path:filename>')
+@app.route("/<path:filename>")
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
 
@@ -120,7 +123,7 @@ def start_mpv_listener(mpvsocketpath):
         "playlist-count",
         "media-title",
         "playback-time",
-        "idle-active"
+        "idle-active",
     ]
 
     # Send commands to MPV to observe property changes
@@ -136,8 +139,8 @@ def start_mpv_listener(mpvsocketpath):
 
             # Split the buffer by newline character
             # to get individual JSON objects
-            while '\n' in buffer:
-                line, buffer = buffer.split('\n', 1)
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
                 if line.strip():
                     try:
                         event = json.loads(line)
@@ -149,22 +152,29 @@ def start_mpv_listener(mpvsocketpath):
             break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description='Start Flask server and MPV listener.')
+    parser = argparse.ArgumentParser(description="Start Flask server and MPV listener.")
     parser.add_argument(
-        '-H', '--host', type=str, default='0.0.0.0',
-        help='Host IP address')
+        "-H", "--host", type=str, default="0.0.0.0", help="Host IP address"
+    )
     parser.add_argument(
-        '-p', '--port', type=int, default=8000,
-        help='Port number for Flask server')
+        "-p", "--port", type=int, default=8000, help="Port number for Flask server"
+    )
     parser.add_argument(
-        '-s', '--socket', type=str, default="/tmp/mpvsocket",
-        help='Path to the MPV socket')
+        "-s",
+        "--socket",
+        type=str,
+        default="/tmp/mpvsocket",
+        help="Path to the MPV socket",
+    )
     parser.add_argument(
-        '-d', '--directory', type=str, default="web",
-        help='Directory for serving HTML pages')
+        "-d",
+        "--directory",
+        type=str,
+        default="web",
+        help="Directory for serving HTML pages",
+    )
     args = parser.parse_args()
 
     if not command_exists("mpv"):
@@ -173,22 +183,24 @@ if __name__ == '__main__':
 
     if not is_writable(args.socket):
         if not can_create_mpv_socket(args.socket):
-            print(f"{args.socket} is not writable")
+            print(f"{args.socket} is not writable", file=stderr)
             exit()
 
     # Additional arguments for mpv
-    mpv_arguments = ['--profile=pseudo-gui',
-                     '--input-ipc-server=' + args.socket, '--idle']
+    mpv_arguments = [
+        "--profile=pseudo-gui",
+        "--input-ipc-server=" + args.socket,
+        "--idle",
+    ]
 
-    # Command to launch mpv player witH additional arguments
-    command = ['mpv'] + mpv_arguments
+    # Command to launch mpv player with additional arguments
+    cmd = ["mpv"] + mpv_arguments
 
     # Launch the mpv player process
-    subprocess.Popen(command)
+    subprocess.Popen(cmd)
 
     # Run the MPV listener in a separate thread
-    mpv_thread = threading.Thread(
-        target=start_mpv_listener, args=(args.socket,))
+    mpv_thread = threading.Thread(target=start_mpv_listener, args=(args.socket,))
     mpv_thread.daemon = True
     mpv_thread.start()
 
