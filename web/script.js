@@ -442,6 +442,7 @@ function sendCommand(requestBody) {
 		if (!response.ok) {
 			throw new Error('Failed to send request');
 		}
+		console.log(response);
 		return response.json(); // Parse response JSON
 	});
 }

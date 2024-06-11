@@ -48,6 +48,23 @@ def process_event(event):
         property_values[property_name] = property_value
 
 
+# def send_command_get_response(client, command):
+#     try:
+#         message = json.dumps(command).encode() + b"\n"
+#         client.sendall(message)
+#         print(f"Sent command: {command}")
+#         data_received = b""
+#         while True:
+#             data = client.recv(4096)  # Adjust buffer size as needed
+#             if not data:  # If data is an empty byte string, no more data is available
+#                 break
+#             data_received += data
+#         print("data received !")
+#         return data_received.decode()
+#     except Exception as e:
+#         print(f"Error sending command: {e}")
+
+
 def send_command(client, command):
     try:
         message = json.dumps(command).encode() + b"\n"
@@ -74,8 +91,8 @@ def command():
         return jsonify({"error": "No command provided"}), 400
 
     try:
-        send_command(client_set, json.loads(data))
-        return jsonify({"status": "command sent"}), 200
+        send_command(client, json.loads(data))
+        return jsonify({"status": "command sent to MPV"}), 200
     except json.JSONDecodeError as e:
         print(e, file=stderr)
         return jsonify({"error": "Invalid JSON format"}), 400
@@ -97,14 +114,11 @@ def serve_static(filename):
 
 # Connect to the MPV IPC socket
 def start_mpv_listener(mpvsocketpath):
-    global client_get
-    global client_set
-    client_get = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    client_set = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    global client
+    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     try:
-        client_get.connect(mpvsocketpath)
-        client_set.connect(mpvsocketpath)
+        client.connect(mpvsocketpath)
         print("Connected to MPV socket")
     except Exception as e:
         print(f"Failed to connect to MPV socket: {e}")
@@ -128,13 +142,13 @@ def start_mpv_listener(mpvsocketpath):
 
     # Send commands to MPV to observe property changes
     for prop in properties_to_observe:
-        send_command(client_get, {"command": ["observe_property", 1, prop]})
+        send_command(client, {"command": ["observe_property", 1, prop]})
 
     buffer = ""
 
     while True:
         try:
-            data = client_get.recv(1024).decode()
+            data = client.recv(4096).decode()
             buffer += data
 
             # Split the buffer by newline character
