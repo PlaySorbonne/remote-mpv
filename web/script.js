@@ -1,4 +1,5 @@
-const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1';
+//const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1';
+const invidiousApiUrl = 'https://invidious.nerdvpn.de/api/v1';
 let playlist = JSON.parse(localStorage.getItem('playlist')) || [];
 let selectedVideos = [];
 let currentPage = 1;
