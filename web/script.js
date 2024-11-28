@@ -541,7 +541,7 @@ document.getElementById('nextButton').addEventListener('click', async () => {
 document.getElementById('playNextVideoButton').addEventListener('click', playNextVideo);
 document.getElementById('restartVideoButton').addEventListener('click', restartVideo);
 // Event listener for "Clear Playlist" button
-document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
+//document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
 // Event listener for "Refresh Playlist" button
 //document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
 
