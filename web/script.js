@@ -12,52 +12,52 @@ let progressSliderMoved = false;
 let volumeSliderPos = 0;
 let volumeSliderMoved = false;
 let apiUrlMPV = localStorage.getItem("apiUrlMPV") || "http://localhost:8000";
-let totalDuration = 0;
 let estimatedEndTime = 0;
 let disableAddVideo = false;
+let playbackTime = 0;
+//let totalDuration = 0;
+let remainingTime = 0;
+let totalPlaylistDuration = 0;
 
 let disableAddVideoWithEndTime = true;
 document.addEventListener("DOMContentLoaded", function () {
-    var toggleSettingsButton = document.getElementById("toggleSettings");
-    var toggleDiv = document.getElementById("toggleDiv");
+  var toggleSettingsButton = document.getElementById("toggleSettings");
+  var toggleDiv = document.getElementById("toggleDiv");
 
-    toggleSettingsButton.addEventListener("click", function () {
-        if (
-            toggleDiv.style.display === "none" ||
-            toggleDiv.style.display === ""
-        ) {
-            toggleDiv.style.display = "flex";
-        } else {
-            toggleDiv.style.display = "none";
-        }
-        adjustContentPadding();
-    });
+  toggleSettingsButton.addEventListener("click", function () {
+    if (toggleDiv.style.display === "none" || toggleDiv.style.display === "") {
+      toggleDiv.style.display = "flex";
+    } else {
+      toggleDiv.style.display = "none";
+    }
     adjustContentPadding();
+  });
+  adjustContentPadding();
 });
 
 window.addEventListener("resize", adjustContentPadding);
 
 // Adjust content padding based on header height
 function adjustContentPadding() {
-    var headerHeight = document.querySelector(".fixed-header").offsetHeight;
-    document.querySelector(".container.my-5").style.paddingTop =
-        headerHeight + "px";
+  var headerHeight = document.querySelector(".fixed-header").offsetHeight;
+  document.querySelector(".container.my-5").style.paddingTop =
+    headerHeight + "px";
 }
 
 function saveBoolean(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getBoolean(key) {
-    const value = localStorage.getItem(key);
-    return value !== null ? JSON.parse(value) : null;
+  const value = localStorage.getItem(key);
+  return value !== null ? JSON.parse(value) : null;
 }
 
 // Function to set the global variable with input field content
 function setApiUrl() {
-    // Get the input field value
-    apiUrlMPV = document.getElementById("apiUrlInput").value;
-    localStorage.setItem("apiUrlMPV", apiUrlMPV);
+  // Get the input field value
+  apiUrlMPV = document.getElementById("apiUrlInput").value;
+  localStorage.setItem("apiUrlMPV", apiUrlMPV);
 }
 
 // Add an event listener to the submit button
@@ -65,134 +65,134 @@ document.getElementById("apiSubmitButton").addEventListener("click", setApiUrl);
 
 // Function to toggle dark mode
 function toggleDarkMode() {
-    document.body.classList.toggle("dark-mode");
-    // Save the mode to localStorage
-    if (document.body.classList.contains("dark-mode")) {
-        localStorage.setItem("darkMode", "enabled");
-    } else {
-        localStorage.setItem("darkMode", "disabled");
-    }
+  document.body.classList.toggle("dark-mode");
+  // Save the mode to localStorage
+  if (document.body.classList.contains("dark-mode")) {
+    localStorage.setItem("darkMode", "enabled");
+  } else {
+    localStorage.setItem("darkMode", "disabled");
+  }
 }
 
 // Attach event listener to dark mode button
 document
-    .getElementById("darkModeButton")
-    .addEventListener("click", toggleDarkMode);
+  .getElementById("darkModeButton")
+  .addEventListener("click", toggleDarkMode);
 
 // Load the saved mode from localStorage
 document.addEventListener("DOMContentLoaded", function () {
-    const darkMode = localStorage.getItem("darkMode");
-    if (darkMode === "enabled") {
-        document.body.classList.add("dark-mode");
-    }
-    const autoPlay = getBoolean("autoPlay");
-    if (autoPlay) {
-        toggleAutoPlay.classList.remove("btn-danger");
-        toggleAutoPlay.classList.add("btn-success");
-        toggleAutoPlay.textContent = "Auto Play";
-    } else {
-        toggleAutoPlay.classList.remove("btn-success");
-        toggleAutoPlay.classList.add("btn-danger");
-        toggleAutoPlay.textContent = "Auto Play";
-    }
+  const darkMode = localStorage.getItem("darkMode");
+  if (darkMode === "enabled") {
+    document.body.classList.add("dark-mode");
+  }
+  const autoPlay = getBoolean("autoPlay");
+  if (autoPlay) {
+    toggleAutoPlay.classList.remove("btn-danger");
+    toggleAutoPlay.classList.add("btn-success");
+    toggleAutoPlay.textContent = "Auto Play";
+  } else {
+    toggleAutoPlay.classList.remove("btn-success");
+    toggleAutoPlay.classList.add("btn-danger");
+    toggleAutoPlay.textContent = "Auto Play";
+  }
 });
 
 // Function to fetch video details from Invidious API
 async function fetchVideoDetails(videoId) {
-    const response = await fetch(
-        `${invidiousApiUrl}/videos/${videoId}?region=FR`,
-    );
-    if (response.ok) {
-        const data = await response.json();
-        return data;
-    } else {
-        return null;
-    }
+  const response = await fetch(
+    `${invidiousApiUrl}/videos/${videoId}?region=FR`,
+  );
+  if (response.ok) {
+    const data = await response.json();
+    return data;
+  } else {
+    return null;
+  }
 }
 
 // Function to handle adding video by URL
 async function addVideoByUrl() {
-    const urlInput = document.getElementById("urlInput");
-    const url = urlInput.value.trim();
-    const videoId = extractVideoIdFromUrl(url);
+  const urlInput = document.getElementById("urlInput");
+  const url = urlInput.value.trim();
+  const videoId = extractVideoIdFromUrl(url);
 
-    if (videoId) {
-        const videoDetails = await fetchVideoDetails(videoId);
-        if (videoDetails) {
-            const video = {
-                videoId: videoDetails.videoId,
-                title: videoDetails.title,
-                videoThumbnails: [
-                    {
-                        url: videoDetails.videoThumbnails[0].url,
-                    },
-                ],
-            };
-            if (!playlist.find((item) => item.videoId === video.videoId)) {
-                playlist.push(video);
-                renderPlaylist();
-                savePlaylist();
-                urlInput.value = ""; // Clear the input field
-            } else {
-                alert("This video is already in the playlist.");
-            }
-        } else {
-            alert("Video not found.");
-        }
+  if (videoId) {
+    const videoDetails = await fetchVideoDetails(videoId);
+    if (videoDetails) {
+      const video = {
+        videoId: videoDetails.videoId,
+        title: videoDetails.title,
+        videoThumbnails: [
+          {
+            url: videoDetails.videoThumbnails[0].url,
+          },
+        ],
+      };
+      if (!playlist.find((item) => item.videoId === video.videoId)) {
+        playlist.push(video);
+        renderPlaylist();
+        savePlaylist();
+        urlInput.value = ""; // Clear the input field
+      } else {
+        alert("This video is already in the playlist.");
+      }
     } else {
-        alert("Invalid URL.");
+      alert("Video not found.");
     }
+  } else {
+    alert("Invalid URL.");
+  }
 }
 
 // Function to extract video ID from YouTube/Invidious URL
 function extractVideoIdFromUrl(url) {
-    const regex =
-        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|invidio\.us\/watch\?v=)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
+  const regex =
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|invidio\.us\/watch\?v=)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
 }
 
 // Attach event listener to the add URL button
 document
-    .getElementById("addUrlButton")
-    .addEventListener("click", addVideoByUrl);
+  .getElementById("addUrlButton")
+  .addEventListener("click", addVideoByUrl);
 
 const toggleAutoPlay = document.getElementById("toggleAutoPlay");
 toggleAutoPlay.addEventListener("click", function () {
-    // Toggle the boolean value
-    autoPlay = !autoPlay;
-    saveBoolean("autoPlay", autoPlay);
-    // Change button color based on the boolean value
-    if (autoPlay) {
-        toggleAutoPlay.classList.remove("btn-danger");
-        toggleAutoPlay.classList.add("btn-success");
-        toggleAutoPlay.textContent = "Auto Play";
-    } else {
-        toggleAutoPlay.classList.remove("btn-success");
-        toggleAutoPlay.classList.add("btn-danger");
-        toggleAutoPlay.textContent = "Auto Play";
-    }
+  // Toggle the boolean value
+  autoPlay = !autoPlay;
+  saveBoolean("autoPlay", autoPlay);
+  // Change button color based on the boolean value
+  if (autoPlay) {
+    toggleAutoPlay.classList.remove("btn-danger");
+    toggleAutoPlay.classList.add("btn-success");
+    toggleAutoPlay.textContent = "Auto Play";
+  } else {
+    toggleAutoPlay.classList.remove("btn-success");
+    toggleAutoPlay.classList.add("btn-danger");
+    toggleAutoPlay.textContent = "Auto Play";
+  }
 });
 // Function to fetch videos from Invidious API
 async function searchVideos(query, page = 1) {
-    const response = await fetch(
-        `${invidiousApiUrl}/search?q=${query}&page=${page}&type=video&region=FR`,
-    );
-    const data = await response.json();
-    return data;
+  const response = await fetch(
+    `${invidiousApiUrl}/search?q=${query}&page=${page}&type=video&region=FR`,
+  );
+  const data = await response.json();
+  return data;
 }
 // Function to render video thumbnails
 function renderVideoThumbnails(videos) {
-    const videoResults = document.getElementById("videoResults");
-    videoResults.innerHTML = "";
-    videos.forEach((video) => {
-        const thumbnailUrl = video.videoThumbnails[4]?.url;
-        const title = video.title;
-        const videoId = video.videoId;
-        const author = video.author;
-        const thumbnail = document.createElement("div");
-        thumbnail.classList.add("col-md-4", "video-thumbnail");
-        thumbnail.innerHTML = `
+  const videoResults = document.getElementById("videoResults");
+  videoResults.innerHTML = "";
+  videos.forEach((video) => {
+    const thumbnailUrl = video.videoThumbnails[4]?.url;
+    const title = video.title;
+    const videoId = video.videoId;
+    const author = video.author;
+    const thumbnail = document.createElement("div");
+    thumbnail.classList.add("col-md-4", "video-thumbnail");
+    thumbnail.innerHTML = `
 		<div class="card mb-3 hover">
 		<img src="${thumbnailUrl}" class="card-img-top" alt="${title}">
 		<div class="card-body">
@@ -201,481 +201,473 @@ function renderVideoThumbnails(videos) {
 		</div>
 		</div>
 		`;
-        const card = thumbnail.querySelector(".card.mb-3");
-        card.addEventListener("click", () => selectVideo(thumbnail, video));
-        videoResults.appendChild(thumbnail);
-    });
+    const card = thumbnail.querySelector(".card.mb-3");
+    card.addEventListener("click", () => selectVideo(thumbnail, video));
+    videoResults.appendChild(thumbnail);
+  });
 }
 
 // Function to handle video selection
 function selectVideo(thumbnail, video) {
-    const cardElement = thumbnail.querySelector(".card.mb-3");
-    if (thumbnail.classList.contains("selected")) {
-        thumbnail.classList.remove("selected");
-        cardElement.classList.remove("highlighted"); // Remove highlighted class
-        selectedVideos = selectedVideos.filter(
-            (v) => v.videoId !== video.videoId,
-        );
-    } else {
-        thumbnail.classList.add("selected");
-        cardElement.classList.add("highlighted"); // Add highlighted class
-        selectedVideos.push(video);
-    }
+  const cardElement = thumbnail.querySelector(".card.mb-3");
+  if (thumbnail.classList.contains("selected")) {
+    thumbnail.classList.remove("selected");
+    cardElement.classList.remove("highlighted"); // Remove highlighted class
+    selectedVideos = selectedVideos.filter((v) => v.videoId !== video.videoId);
+  } else {
+    thumbnail.classList.add("selected");
+    cardElement.classList.add("highlighted"); // Add highlighted class
+    selectedVideos.push(video);
+  }
 }
 // Function to add selected videos to playlist (end)
 function addToPlaylist() {
-    selectedVideos.forEach((video) => {
-        if (!playlist.find((item) => item.videoId === video.videoId)) {
-            playlist.push(video);
-        }
-    });
-    renderPlaylist();
-    savePlaylist();
-    clearSelection();
+  selectedVideos.forEach((video) => {
+    if (!playlist.find((item) => item.videoId === video.videoId)) {
+      playlist.push(video);
+    }
+  });
+  renderPlaylist();
+  savePlaylist();
+  clearSelection();
+  updateTotalDuration();
 }
 // Function to add selected videos to the beginning of the playlist
 function addToBeginning() {
-    selectedVideos.forEach((video) => {
-        if (!playlist.find((item) => item.videoId === video.videoId)) {
-            playlist.unshift(video);
-        }
-    });
-    renderPlaylist();
-    savePlaylist();
-    clearSelection();
+  selectedVideos.forEach((video) => {
+    if (!playlist.find((item) => item.videoId === video.videoId)) {
+      playlist.unshift(video);
+    }
+  });
+  renderPlaylist();
+  savePlaylist();
+  clearSelection();
 }
 // Function to render playlist
 function renderPlaylist() {
-    const playlistElement = document.getElementById("playlist");
-    playlistElement.innerHTML = "";
-    totalDuration = 0;
-    playlist.forEach((item, index) => {
-        const listItem = document.createElement("li");
-        listItem.classList.add("list-group-item", "playlist-item");
-        listItem.innerHTML = `
+  const playlistElement = document.getElementById("playlist");
+  playlistElement.innerHTML = "";
+  totalPlaylistDuration = 0;
+  playlist.forEach((item, index) => {
+    const listItem = document.createElement("li");
+    listItem.classList.add("list-group-item", "playlist-item");
+    listItem.innerHTML = `
 		<span class="playlist-title" title="${item.title}">${index + 1}. ${item.title}</span>
 		`;
-        playlistElement.appendChild(listItem);
+    playlistElement.appendChild(listItem);
 
-        // Create container for delete button
-        const buttonContainer = document.createElement("div");
-        buttonContainer.classList.add("delete-button-container");
+    // Create container for delete button
+    const buttonContainer = document.createElement("div");
+    buttonContainer.classList.add("delete-button-container");
 
-        // Create delete button
-        const deleteButton = document.createElement("button");
-        deleteButton.classList.add("btn", "btn-danger", "btn-sm");
-        deleteButton.innerHTML = `
+    // Create delete button
+    const deleteButton = document.createElement("button");
+    deleteButton.classList.add("btn", "btn-danger", "btn-sm");
+    deleteButton.innerHTML = `
 		<img src="trash-solid.svg" alt="Delete" width="16" height="16">
 		`;
-        deleteButton.addEventListener("click", () => removeFromPlaylist(index));
+    deleteButton.addEventListener("click", () => removeFromPlaylist(index));
 
-        // Append delete button to its container
-        buttonContainer.appendChild(deleteButton);
+    // Append delete button to its container
+    buttonContainer.appendChild(deleteButton);
 
-        // Append delete button container to playlist item
-        listItem.appendChild(buttonContainer);
-        if (item.lengthSeconds) {
-            let duration = item.lengthSeconds;
-            totalDuration += duration;
-        }
-    });
-    // Initialize SortableJS for the playlist
-    new Sortable(playlistElement, {
-        animation: 150,
-        onEnd: (event) => {
-            const movedItem = playlist.splice(event.oldIndex, 1)[0];
-            playlist.splice(event.newIndex, 0, movedItem);
-            savePlaylist();
-            renderPlaylist(); // Re-render to update the order
-        },
-    });
-    const durationDiv = document.getElementById("duration");
-    durationDiv.innerHTML = new Date(totalDuration * 1000)
-        .toISOString()
-        .substr(11, 8);
-    updateTotalDuration();
+    // Append delete button container to playlist item
+    listItem.appendChild(buttonContainer);
+    if (item.lengthSeconds) {
+      let duration = item.lengthSeconds;
+      totalPlaylistDuration += duration;
+    }
+  });
+  // Initialize SortableJS for the playlist
+  new Sortable(playlistElement, {
+    animation: 150,
+    onEnd: (event) => {
+      const movedItem = playlist.splice(event.oldIndex, 1)[0];
+      playlist.splice(event.newIndex, 0, movedItem);
+      savePlaylist();
+      renderPlaylist(); // Re-render to update the order
+    },
+  });
+  const durationDiv = document.getElementById("duration");
+  durationDiv.innerHTML = new Date(totalPlaylistDuration * 1000)
+    .toISOString()
+    .substr(11, 8);
+  updateTotalDuration();
 }
 
 function updateTotalDuration() {
-    let currentTime = new Date();
-    estimatedEndTime = new Date(currentTime.getTime() + totalDuration * 1000);
-    const endTimeDiv = document.getElementById("endTime");
-    endTimeDiv.innerHTML = estimatedEndTime.toString().substr(16, 8);
+  let currentTime = new Date();
+  estimatedEndTime = new Date(
+    currentTime.getTime() + totalPlaylistDuration * 1000 + remainingTime * 1000,
+  );
+  const endTimeDiv = document.getElementById("endTime");
+  endTimeDiv.innerHTML = estimatedEndTime.toString().substr(16, 8);
 }
 
 setInterval(updateTotalDuration, 1000);
 
 function checkEndTime() {
-    let inputEndTime = document.getElementById("end-time").value;
-    if (inputEndTime) {
-        // Récupérer l'heure et les minutes
-        let [hours, minutes] = inputEndTime.split(":").map(Number);
+  let inputEndTime = document.getElementById("end-time").value;
+  if (inputEndTime) {
+    // Récupérer l'heure et les minutes
+    let [hours, minutes] = inputEndTime.split(":").map(Number);
 
-        // Créer un objet Date avec l'heure choisie
-        let endTime = new Date();
-        endTime.setHours(hours);
-        endTime.setMinutes(minutes);
-        endTime.setSeconds(0);
-        endTime.setMilliseconds(0);
-        if (estimatedEndTime.getTime() > endTime.getTime()) {
-            disableAddVideo = true;
-        } else {
-            disableAddVideo = false;
-        }
-        updateAddNewVideoState();
+    // Créer un objet Date avec l'heure choisie
+    let endTime = new Date();
+    endTime.setHours(hours);
+    endTime.setMinutes(minutes);
+    endTime.setSeconds(0);
+    endTime.setMilliseconds(0);
+    if (estimatedEndTime.getTime() > endTime.getTime()) {
+      disableAddVideo = true;
+    } else {
+      disableAddVideo = false;
     }
+    updateAddNewVideoState();
+  }
 }
 
-setInterval(checkEndTime, 2000);
+setInterval(checkEndTime, 1000);
 
 function getListOfElementByIds(idList) {
-    let elementList = [];
-    idList.forEach((id) => {
-        let element = document.getElementById(id);
-        elementList.push(element);
-    });
-    return elementList;
+  let elementList = [];
+  idList.forEach((id) => {
+    let element = document.getElementById(id);
+    elementList.push(element);
+  });
+  return elementList;
 }
 
 function updateAddNewVideoState() {
-    getListOfElementByIds([
-        "addToPlaylistButton",
-        "addToBeginningButton",
-        "addUrlButton",
-    ]).forEach(
-        (element) =>
-            (element.disabled = disableAddVideoWithEndTime && disableAddVideo),
-    );
+  getListOfElementByIds([
+    "addToPlaylistButton",
+    "addToBeginningButton",
+    "addUrlButton",
+  ]).forEach(
+    (element) =>
+      (element.disabled = disableAddVideoWithEndTime && disableAddVideo),
+  );
 }
 
 setInterval(updateAddNewVideoState, 2000);
 
 const toggleDisableAddVideo = document.getElementById("toggleDisableAddVideo");
 toggleDisableAddVideo.addEventListener("click", function () {
-    // Toggle the boolean value
-    disableAddVideoWithEndTime = !disableAddVideoWithEndTime;
-    saveBoolean("disableAddVideoWithEndTime", disableAddVideoWithEndTime);
-    // Change button color based on the boolean value
-    if (disableAddVideoWithEndTime) {
-        toggleDisableAddVideo.classList.remove("btn-danger");
-        toggleDisableAddVideo.classList.add("btn-success");
-        //toggleDisableAddVideo.textContent = "Auto Play";
-    } else {
-        toggleDisableAddVideo.classList.remove("btn-success");
-        toggleDisableAddVideo.classList.add("btn-danger");
-        //toggleDisableAddVideo.textContent = "Auto Play";
-    }
+  // Toggle the boolean value
+  disableAddVideoWithEndTime = !disableAddVideoWithEndTime;
+  saveBoolean("disableAddVideoWithEndTime", disableAddVideoWithEndTime);
+  // Change button color based on the boolean value
+  if (disableAddVideoWithEndTime) {
+    toggleDisableAddVideo.classList.remove("btn-danger");
+    toggleDisableAddVideo.classList.add("btn-success");
+    //toggleDisableAddVideo.textContent = "Auto Play";
+  } else {
+    toggleDisableAddVideo.classList.remove("btn-success");
+    toggleDisableAddVideo.classList.add("btn-danger");
+    //toggleDisableAddVideo.textContent = "Auto Play";
+  }
 });
 
 // Function to clear selection
 function clearSelection() {
-    selectedVideos = [];
-    const thumbnails = document.querySelectorAll(".highlighted");
-    thumbnails.forEach((thumbnail) =>
-        thumbnail.classList.remove("highlighted"),
-    );
+  selectedVideos = [];
+  const thumbnails = document.querySelectorAll(".highlighted");
+  thumbnails.forEach((thumbnail) => thumbnail.classList.remove("highlighted"));
 }
 // Function to remove video from playlist
 function removeFromPlaylist(index) {
-    playlist.splice(index, 1);
-    savePlaylist();
-    renderPlaylist();
+  playlist.splice(index, 1);
+  savePlaylist();
+  renderPlaylist();
 }
 
 function playNextVideo() {
-    if (playlist.length > 0) {
-        const nextVideo = playlist.shift();
-        currentlyPlaying = nextVideo;
-        savePlaylist();
-        renderPlaylist();
-        // Send the next video to MPV
-        sendToMPV(nextVideo)
-            .then((response) => {
-                // Parse the MPV response
-                const responseData = JSON.parse(response);
-                // Check if the response includes "error": "success"
-                if (responseData.error === "success") {
-                    const progressSlider =
-                        document.getElementById("progressSlider");
-                    progressSliderPos = 0;
-                    progressSlider.value = progressSliderPos;
-                } else {
-                    // Handle error if the response is not successful
-                    console.error(
-                        "Error playing next video:",
-                        responseData.error,
-                    );
-                }
-            })
-            .catch((error) => {
-                console.error("Error playing next video:", error);
-                // Handle error if there is an issue with the request
-            });
-        console.log(nextVideo);
-    } else {
-        // No video in the playlist, handle accordingly
-    }
+  if (playlist.length > 0) {
+    const nextVideo = playlist.shift();
+    currentlyPlaying = nextVideo;
+    savePlaylist();
+    renderPlaylist();
+    // Send the next video to MPV
+    sendToMPV(nextVideo)
+      .then((response) => {
+        // Parse the MPV response
+        const responseData = JSON.parse(response);
+        // Check if the response includes "error": "success"
+        if (responseData.error === "success") {
+          const progressSlider = document.getElementById("progressSlider");
+          progressSliderPos = 0;
+          progressSlider.value = progressSliderPos;
+        } else {
+          // Handle error if the response is not successful
+          console.error("Error playing next video:", responseData.error);
+        }
+      })
+      .catch((error) => {
+        console.error("Error playing next video:", error);
+        // Handle error if there is an issue with the request
+      });
+    console.log(nextVideo);
+  } else {
+    // No video in the playlist, handle accordingly
+  }
 }
 // Function to restart the current video
 function restartVideo() {
-    if (currentlyPlaying) {
-        //document.getElementById('currentlyPlaying').textContent = `Now playing: ${currentlyPlaying.title}`;
-        sendToMPV(currentlyPlaying);
-    }
+  if (currentlyPlaying) {
+    //document.getElementById('currentlyPlaying').textContent = `Now playing: ${currentlyPlaying.title}`;
+    sendToMPV(currentlyPlaying);
+  }
 }
 // Function to save playlist to localStorage
 function savePlaylist() {
-    localStorage.setItem("playlist", JSON.stringify(playlist));
+  localStorage.setItem("playlist", JSON.stringify(playlist));
 }
 // Function to clear the playlist
 function clearPlaylist() {
-    playlist = []; // Clear the playlist array
-    savePlaylist(); // Save the empty playlist to localStorage
-    renderPlaylist(); // Update the UI to reflect the changes
+  playlist = []; // Clear the playlist array
+  savePlaylist(); // Save the empty playlist to localStorage
+  renderPlaylist(); // Update the UI to reflect the changes
+  updateTotalDuration();
 }
 // Function to send video URL to MPV
 function sendToMPV(video) {
-    console.log(video);
-    // Define the POST request body containing the video URL
-    const requestBody = {
-        command: [
-            "loadfile",
-            "https://www.youtube.com/watch?v=" + video.videoId,
-        ],
-    };
+  console.log(video);
+  // Define the POST request body containing the video URL
+  const requestBody = {
+    command: ["loadfile", "https://www.youtube.com/watch?v=" + video.videoId],
+  };
 
-    // Send POST request using sendCommand function
-    sendCommand(requestBody)
-        .then(() => {
-            console.log("Command sent successfully to MPV");
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
+  // Send POST request using sendCommand function
+  sendCommand(requestBody)
+    .then(() => {
+      console.log("Command sent successfully to MPV");
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
 }
 
 // Function to update playback time and total duration
 function updatePlaybackInfo() {
-    const apiUrl = apiUrlMPV + "/properties"; // URL of your Flask server's /properties endpoint
+  const apiUrl = apiUrlMPV + "/properties"; // URL of your Flask server's /properties endpoint
 
-    // Make a single GET request to retrieve all properties
-    fetch(apiUrl)
-        .then((response) => response.json())
-        .then((data) => {
-            const timePos = data["playback-time"];
-            const duration = data["duration"];
-            const title = data["media-title"];
-            const volume = data["volume"];
-            const isIdle = data["idle-active"];
-            const isPaused = data["pause"];
+  // Make a single GET request to retrieve all properties
+  fetch(apiUrl)
+    .then((response) => response.json())
+    .then((data) => {
+      const timePos = data["playback-time"];
+      const duration = data["duration"];
+      const title = data["media-title"];
+      const volume = data["volume"];
+      const isIdle = data["idle-active"];
+      const isPaused = data["pause"];
 
-            // Convert playback time and duration from seconds to HH:MM:SS format
-            const playbackTime = formatTime(timePos);
-            const totalDuration = formatTime(duration);
+      // Convert playback time and duration from seconds to HH:MM:SS format
+      playbackTime = timePos;
+      //totalDuration = duration;
+      remainingTime = duration - playbackTime;
 
-            // Update HTML to display playback time, total duration, and video title
-            document.getElementById("playbackInfo").innerHTML = `
-		<strong>Playback:</strong> ${playbackTime} / ${totalDuration}<br>
+      // Update HTML to display playback time, total duration, and video title
+      document.getElementById("playbackInfo").innerHTML = `
+		<strong>Playback:</strong> ${formatTime(playbackTime)} / ${formatTime(duration)}<br>
 		<strong>Title:</strong> ${title}
 		`;
 
-            // Get the progress slider element
-            const progressSlider = document.getElementById("progressSlider");
-            progressSlider.max = duration;
+      // Get the progress slider element
+      const progressSlider = document.getElementById("progressSlider");
+      progressSlider.max = duration;
 
-            if (progressSliderMoved) {
-                setPlaybackTime(progressSliderPos);
-                progressSliderMoved = false;
-            } else {
-                progressSlider.value = timePos;
-            }
+      if (progressSliderMoved) {
+        setPlaybackTime(progressSliderPos);
+        progressSliderMoved = false;
+      } else {
+        progressSlider.value = timePos;
+      }
 
-            if (volumeSliderMoved) {
-                setVolume(volumeSliderPos);
-                volumeSliderMoved = false;
-            } else {
-                const volumeSlider = document.getElementById("volumeSlider");
-                volumeSlider.value = volume;
-            }
+      if (volumeSliderMoved) {
+        setVolume(volumeSliderPos);
+        volumeSliderMoved = false;
+      } else {
+        const volumeSlider = document.getElementById("volumeSlider");
+        volumeSlider.value = volume;
+      }
 
-            if (isIdle) {
-                if (playlist.length > 0 && autoPlay) {
-                    // Play next video if playlist is not empty
-                    playNextVideo();
-                }
-            }
-            if (!isPaused) {
-                document.getElementById("pauseButton").textContent = "Pause";
-                videoWaitingPlay = false;
-            } else {
-                document.getElementById("pauseButton").textContent = "Resume";
-            }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            // Display error message in console
-        });
+      if (isIdle) {
+        if (playlist.length > 0 && autoPlay) {
+          // Play next video if playlist is not empty
+          playNextVideo();
+        }
+      }
+      if (!isPaused) {
+        document.getElementById("pauseButton").textContent = "Pause";
+        videoWaitingPlay = false;
+      } else {
+        document.getElementById("pauseButton").textContent = "Resume";
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      // Display error message in console
+    });
 }
 
 // Function to format time from seconds to HH:MM:SS format
 function formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 // Function to make a POST request
 function sendCommand(requestBody) {
-    const apiUrl = apiUrlMPV + "/command";
-    // Define POST request options
-    const requestOptions = {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-    };
-    // Send POST request and return response JSON
-    return fetch(apiUrl, requestOptions).then((response) => {
-        if (!response.ok) {
-            throw new Error("Failed to send request");
-        }
-        console.log(response);
-        return response.json(); // Parse response JSON
-    });
+  const apiUrl = apiUrlMPV + "/command";
+  // Define POST request options
+  const requestOptions = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  };
+  // Send POST request and return response JSON
+  return fetch(apiUrl, requestOptions).then((response) => {
+    if (!response.ok) {
+      throw new Error("Failed to send request");
+    }
+    console.log(response);
+    return response.json(); // Parse response JSON
+  });
 }
 // Call updatePlaybackInfo function every 2 seconds
 setInterval(updatePlaybackInfo, 1000);
 // Function to send a pause or resume command to MPV
 function togglePause() {
-    // Define current state of playback
-    let pauseState =
-        document
-            .getElementById("pauseButton")
-            .textContent.trim()
-            .toLowerCase() === "pause";
-    // Define command based on current state
-    const command = pauseState
-        ? ["set_property", "pause", true]
-        : ["set_property", "pause", false];
-    // Send command to MPV
-    sendCommand({
-        command: command,
+  // Define current state of playback
+  let pauseState =
+    document.getElementById("pauseButton").textContent.trim().toLowerCase() ===
+    "pause";
+  // Define command based on current state
+  const command = pauseState
+    ? ["set_property", "pause", true]
+    : ["set_property", "pause", false];
+  // Send command to MPV
+  sendCommand({
+    command: command,
+  })
+    .then(() => {
+      // Update button text based on new state
+      document.getElementById("pauseButton").textContent = pauseState
+        ? "Resume"
+        : "Pause";
     })
-        .then(() => {
-            // Update button text based on new state
-            document.getElementById("pauseButton").textContent = pauseState
-                ? "Resume"
-                : "Pause";
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            // Display error message in console
-        });
+    .catch((error) => {
+      console.error("Error:", error);
+      // Display error message in console
+    });
 }
 // Attach click event listener to the pause button
 document.getElementById("pauseButton").addEventListener("click", togglePause);
 // Function to set volume
 function setVolume(volume) {
-    // Send volume command to MPV
-    sendCommand({
-        command: ["set_property", "volume", volume],
-    }).catch((error) => {
-        console.error("Error:", error);
-        // Display error message in console
-    });
+  // Send volume command to MPV
+  sendCommand({
+    command: ["set_property", "volume", volume],
+  }).catch((error) => {
+    console.error("Error:", error);
+    // Display error message in console
+  });
 }
 // Attach click event listener to the pause button
 document.getElementById("pauseButton").addEventListener("click", togglePause);
 
 // Attach input event listener to the volume slider
 document.getElementById("volumeSlider").addEventListener("input", function () {
-    volumeSliderPos = document.getElementById("volumeSlider").value;
-    volumeSliderMoved = true;
+  volumeSliderPos = document.getElementById("volumeSlider").value;
+  volumeSliderMoved = true;
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-    // Load playlist from localStorage
-    playlist = JSON.parse(localStorage.getItem("playlist")) || [];
-    // Render the playlist
-    renderPlaylist();
+  // Load playlist from localStorage
+  playlist = JSON.parse(localStorage.getItem("playlist")) || [];
+  // Render the playlist
+  renderPlaylist();
 });
 // Function to refresh the playlist
 function refreshPlaylist() {
-    playlist = JSON.parse(localStorage.getItem("playlist")) || []; // Reload playlist from localStorage
-    renderPlaylist(); // Update the UI to reflect the changes
+  playlist = JSON.parse(localStorage.getItem("playlist")) || []; // Reload playlist from localStorage
+  renderPlaylist(); // Update the UI to reflect the changes
 }
 // Function to perform search
 async function performSearch() {
-    const searchInput = document.getElementById("searchInput");
-    searchQuery = searchInput.value.trim();
-    if (searchQuery !== "") {
-        currentPage = 1;
-        const videos = await searchVideos(searchQuery, currentPage);
-        renderVideoThumbnails(videos);
-    }
+  const searchInput = document.getElementById("searchInput");
+  searchQuery = searchInput.value.trim();
+  if (searchQuery !== "") {
+    currentPage = 1;
+    const videos = await searchVideos(searchQuery, currentPage);
+    renderVideoThumbnails(videos);
+  }
 }
 // Event listener for input event on search input
 document
-    .getElementById("searchInput")
-    .addEventListener("input", async (event) => {
-        await performSearch();
-    });
+  .getElementById("searchInput")
+  .addEventListener("input", async (event) => {
+    await performSearch();
+  });
 // Event listener for keydown event on search input
 document
-    .getElementById("searchInput")
-    .addEventListener("keydown", async (event) => {
-        if (event.key === "Enter") {
-            await performSearch();
-        }
-    });
+  .getElementById("searchInput")
+  .addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      await performSearch();
+    }
+  });
 // Event listener for "Add to Playlist" button
 document
-    .getElementById("addToPlaylistButton")
-    .addEventListener("click", addToPlaylist);
+  .getElementById("addToPlaylistButton")
+  .addEventListener("click", addToPlaylist);
 // Event listener for "Add to Beginning" button
 document
-    .getElementById("addToBeginningButton")
-    .addEventListener("click", addToBeginning);
+  .getElementById("addToBeginningButton")
+  .addEventListener("click", addToBeginning);
 // Event listener for "Previous" button
 document.getElementById("prevButton").addEventListener("click", async () => {
-    if (currentPage > 1) {
-        currentPage--;
-        const videos = await searchVideos(searchQuery, currentPage);
-        renderVideoThumbnails(videos);
-    }
+  if (currentPage > 1) {
+    currentPage--;
+    const videos = await searchVideos(searchQuery, currentPage);
+    renderVideoThumbnails(videos);
+  }
 });
 // Event listener for "Next" button
 document.getElementById("nextButton").addEventListener("click", async () => {
-    currentPage++;
-    const videos = await searchVideos(searchQuery, currentPage);
-    renderVideoThumbnails(videos);
+  currentPage++;
+  const videos = await searchVideos(searchQuery, currentPage);
+  renderVideoThumbnails(videos);
 });
 // Event listeners for the fixed header buttons
 document
-    .getElementById("playNextVideoButton")
-    .addEventListener("click", playNextVideo);
+  .getElementById("playNextVideoButton")
+  .addEventListener("click", playNextVideo);
 document
-    .getElementById("restartVideoButton")
-    .addEventListener("click", restartVideo);
+  .getElementById("restartVideoButton")
+  .addEventListener("click", restartVideo);
 // Event listener for "Clear Playlist" button
 //document.getElementById('clearPlaylistButton').addEventListener('click', clearPlaylist);
 // Event listener for "Refresh Playlist" button
 //document.getElementById('refreshPlaylistButton').addEventListener('click', refreshPlaylist);
 
 document
-    .getElementById("progressSlider")
-    .addEventListener("input", function () {
-        progressSliderPos = document.getElementById("progressSlider").value;
-        progressSliderMoved = true;
-    });
+  .getElementById("progressSlider")
+  .addEventListener("input", function () {
+    progressSliderPos = document.getElementById("progressSlider").value;
+    progressSliderMoved = true;
+  });
 
 function setPlaybackTime(playbackTime) {
-    // Send playbackTime command to MPV
-    sendCommand({
-        command: ["set_property", "playback-time", playbackTime],
-    }).catch((error) => {
-        console.error("Error:", error);
-        // Display error message in console
-    });
+  // Send playbackTime command to MPV
+  sendCommand({
+    command: ["set_property", "playback-time", playbackTime],
+  }).catch((error) => {
+    console.error("Error:", error);
+    // Display error message in console
+  });
 }
