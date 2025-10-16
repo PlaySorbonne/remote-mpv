@@ -1,6 +1,7 @@
 //const invidiousApiUrl = 'https://invidious.fdn.fr/api/v1';
 //const invidiousApiUrl = 'https://invidious.nerdvpn.de/api/v1';
-const invidiousApiUrl = "https://inv.backend.playsorbonne.fr/api/v1";
+const invidiousBaseUrl = "https://invidious.playsorbonne.fr";
+const invidiousApiUrl = invidiousBaseUrl+"/api/v1";
 let playlist = JSON.parse(localStorage.getItem("playlist")) || [];
 let selectedVideos = [];
 let currentPage = 1;
@@ -124,7 +125,7 @@ async function addVideoByUrl() {
         title: videoDetails.title,
         videoThumbnails: [
           {
-            url: videoDetails.videoThumbnails[0].url,
+            url: videoDetails.videoThumbnails[4].url,
           },
         ],
       };
@@ -186,7 +187,7 @@ function renderVideoThumbnails(videos) {
   const videoResults = document.getElementById("videoResults");
   videoResults.innerHTML = "";
   videos.forEach((video) => {
-    const thumbnailUrl = video.videoThumbnails[4]?.url;
+    const thumbnailUrl = invidiousBaseUrl+video.videoThumbnails[4]?.url;
     const title = video.title;
     const videoId = video.videoId;
     const author = video.author;
