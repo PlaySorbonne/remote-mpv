@@ -7,6 +7,7 @@ MPV player remote control
 - mpv
 - python 3
 - python 3 Flask framework
+- yt-dlp
 
 ### to run
 ```sh
